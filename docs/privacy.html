@@ -1,81 +1,147 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Copy History — Privacy Policy</title>
-<link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Copy History — Privacy Policy</title>
+  <meta name="description" content="Privacy policy for Copy History. Data stays on your device. No analytics, no third parties, no transmission." />
+  <meta name="theme-color" content="#f7f4ec" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400..600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-<main>
-  <nav class="topnav">
-    <a href="./">Support</a>
-    <a href="privacy.html">Privacy</a>
-    <a href="https://github.com/kiddkevin00/copyhistory">GitHub</a>
-  </nav>
+<div class="page">
 
-  <header class="hero">
-    <h1>Privacy Policy</h1>
-    <p class="muted">Last updated: May 28, 2026</p>
+  <!-- masthead -->
+  <header class="masthead">
+    <a class="wordmark" href="./" aria-label="Copy History home">
+      <svg class="mark" viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="3.2" y="3.2" width="13" height="15.5" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+        <rect x="7.8" y="7.8" width="13" height="15.5" rx="1.6" fill="var(--paper)" stroke="currentColor" stroke-width="1.5"/>
+      </svg>
+      Copy <em>History</em>
+    </a>
+    <nav class="topnav" aria-label="Primary">
+      <a href="./">Support</a>
+      <a href="privacy.html" aria-current="page">Privacy</a>
+      <a href="https://github.com/kiddkevin00/copyhistory">GitHub</a>
+    </nav>
   </header>
 
-  <section>
-    <p class="lede">Copy History is designed to be private by default. All data stays on your device. Nothing is transmitted, stored remotely, or shared with third parties.</p>
+  <!-- mast -->
+  <section class="mast" aria-labelledby="mast-title">
+    <p class="eyebrow">Privacy<span class="dot"></span>Plain statement</p>
+    <h1 class="display" id="mast-title">
+      Privacy<br>
+      <em>Policy<span class="punct">.</span></em>
+    </h1>
+    <div class="mast-rule" aria-hidden="true"></div>
+    <p class="lede">Copy History is designed to be <em>private by default</em>. All data stays on your device. Nothing is transmitted, stored remotely, or shared with third parties.</p>
+    <p class="meta">Last updated<span class="sep">·</span>28 May 2026</p>
   </section>
 
-  <section>
-    <h2>What data the app handles</h2>
-    <ul>
-      <li><strong>Clipboard contents</strong> (text only) that you copy while the app is in the foreground.</li>
-      <li><strong>Saved snippets</strong> that you create manually (label + text).</li>
-      <li><strong>Pin state</strong> for individual entries.</li>
-    </ul>
-  </section>
+  <!-- sections -->
+  <main>
 
-  <section>
-    <h2>How that data is stored</h2>
-    <ul>
-      <li>On your device only, in the app's local storage (iOS sandboxed storage via React Native AsyncStorage).</li>
-      <li>The most recent 500 clipboard entries are retained; pinned entries and saved snippets are never auto-evicted.</li>
-      <li>Clearing history or deleting individual entries from within the app removes them permanently from your device.</li>
-      <li>Uninstalling the app removes all stored data.</li>
-    </ul>
-  </section>
+    <article class="doc" id="data">
+      <aside class="doc-num" aria-hidden="true">01</aside>
+      <section class="doc-body">
+        <p class="doc-eyebrow">Scope</p>
+        <h2>What data the app handles</h2>
+        <p>The app only ever touches three kinds of data, each tied to an explicit action you take inside it.</p>
+        <ul>
+          <li><strong>Clipboard contents</strong> (text only) that you copy while the app is in the foreground.</li>
+          <li><strong>Saved snippets</strong> you create manually — a label and the text to copy.</li>
+          <li><strong>Pin state</strong> for individual entries.</li>
+        </ul>
+      </section>
+    </article>
 
-  <section>
-    <h2>What is NOT collected or transmitted</h2>
-    <ul>
-      <li>No analytics or telemetry of any kind.</li>
-      <li>No advertising identifiers.</li>
-      <li>No third-party SDKs that collect data.</li>
-      <li>No account, no login, no user profile.</li>
-      <li>No network requests for clipboard data — nothing leaves your device.</li>
-    </ul>
-  </section>
+    <article class="doc" id="storage">
+      <aside class="doc-num" aria-hidden="true">02</aside>
+      <section class="doc-body">
+        <p class="doc-eyebrow">Storage</p>
+        <h2>How that data is stored</h2>
+        <p>Everything lives in the app's own sandboxed storage on your device, using React Native's <span class="kbd">AsyncStorage</span> — the iOS sandbox prevents other apps from reading it.</p>
+        <ul>
+          <li>The most recent <strong>500</strong> clipboard entries are retained; pinned entries and saved snippets are never auto-evicted.</li>
+          <li>Clearing history or deleting individual entries from within the app removes them permanently from your device.</li>
+          <li>Uninstalling the app removes all stored data.</li>
+        </ul>
+      </section>
+    </article>
 
-  <section>
-    <h2>Permissions</h2>
-    <p>iOS requires explicit user permission to read the clipboard. You will see iOS's "pasted from…" banner and/or paste-permission prompts whenever the app reads the clipboard. You can change the Paste from Other Apps setting at any time in <strong>Settings → Apps → Copy History</strong>.</p>
-  </section>
+    <article class="doc" id="not-collected">
+      <aside class="doc-num" aria-hidden="true">03</aside>
+      <section class="doc-body">
+        <p class="doc-eyebrow">Negative space</p>
+        <h2>What is NOT collected or transmitted</h2>
+        <p>It's worth being explicit about the absences, since those are the parts privacy policies usually elide.</p>
+        <ul>
+          <li>No analytics or telemetry of any kind.</li>
+          <li>No advertising identifiers.</li>
+          <li>No third-party SDKs that collect data.</li>
+          <li>No account, no login, no user profile.</li>
+          <li>No network requests for clipboard data — nothing leaves your device.</li>
+        </ul>
+      </section>
+    </article>
 
-  <section>
-    <h2>Children's privacy</h2>
-    <p>Copy History is a general-purpose utility and is not directed at children under 13. It does not knowingly collect any data that could identify a user of any age, because it does not collect or transmit personal data.</p>
-  </section>
+    <article class="doc" id="permissions">
+      <aside class="doc-num" aria-hidden="true">04</aside>
+      <section class="doc-body">
+        <p class="doc-eyebrow">Permissions</p>
+        <h2>iOS clipboard permission</h2>
+        <p>iOS requires explicit user permission to read the clipboard. You will see iOS's "pasted from…" banner and/or paste-permission prompts whenever the app reads the clipboard. You can change the Paste from Other Apps setting at any time in <span class="kbd">Settings → Apps → Copy History</span>.</p>
+      </section>
+    </article>
 
-  <section>
-    <h2>Changes to this policy</h2>
-    <p>If material changes are made, the "Last updated" date above will change. Continued use of the app after an update constitutes acceptance of the updated policy.</p>
-  </section>
+    <article class="doc" id="children">
+      <aside class="doc-num" aria-hidden="true">05</aside>
+      <section class="doc-body">
+        <p class="doc-eyebrow">Children</p>
+        <h2>Children's privacy</h2>
+        <p>Copy History is a general-purpose utility and is not directed at children under 13. It does not knowingly collect any data that could identify a user of any age — because it does not collect or transmit personal data at all.</p>
+      </section>
+    </article>
 
-  <section class="card">
-    <h3>Questions</h3>
-    <p>Open an issue on GitHub: <a href="https://github.com/kiddkevin00/copyhistory/issues">github.com/kiddkevin00/copyhistory/issues</a></p>
-  </section>
+    <article class="doc" id="changes">
+      <aside class="doc-num" aria-hidden="true">06</aside>
+      <section class="doc-body">
+        <p class="doc-eyebrow">Versioning</p>
+        <h2>Changes to this policy</h2>
+        <p>If material changes are made, the <em>last updated</em> date at the top of this page will change. Continued use of the app after an update constitutes acceptance of the updated policy.</p>
+      </section>
+    </article>
 
-  <footer>
-    Copy History · <a href="./">Support</a> · <a href="https://github.com/kiddkevin00/copyhistory">Source on GitHub</a>
+  </main>
+
+  <!-- contact -->
+  <aside class="contact-card" aria-labelledby="contact-h">
+    <p class="eyebrow">Card<span class="dot"></span>No. 02</p>
+    <h3 id="contact-h">Questions about <em>privacy</em>?</h3>
+    <p>Open an issue on GitHub. Public, traceable, and the same channel used for everything else.</p>
+    <p class="link-row"><a href="https://github.com/kiddkevin00/copyhistory/issues">github.com/kiddkevin00/copyhistory/issues</a></p>
+  </aside>
+
+  <!-- footer -->
+  <footer class="colophon">
+    <div class="colophon-left">
+      <svg class="mark" viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="3.2" y="3.2" width="13" height="15.5" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+        <rect x="7.8" y="7.8" width="13" height="15.5" rx="1.6" fill="var(--paper)" stroke="currentColor" stroke-width="1.5"/>
+      </svg>
+      Copy <em>History</em> · Mark Utility Labs
+    </div>
+    <nav class="colophon-meta" aria-label="Footer">
+      <a href="./">Support</a>
+      <a href="https://github.com/kiddkevin00/copyhistory">Source</a>
+      <a href="https://github.com/kiddkevin00/copyhistory/issues">Issues</a>
+    </nav>
   </footer>
-</main>
+
+</div>
 </body>
 </html>
