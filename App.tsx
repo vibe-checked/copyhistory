@@ -1,13 +1,15 @@
 import { StatusBar } from 'expo-status-bar';
 import * as Clipboard from 'expo-clipboard';
+import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   AppState,
   AppStateStatus,
   FlatList,
   KeyboardAvoidingView,
+  Linking,
   Modal,
   Platform,
   Pressable,
@@ -27,7 +29,27 @@ type Entry = {
   id: string;
   text: string;
   copiedAt: number;
+  pinned?: boolean;
 };
+
+type SmartAction =
+  | { kind: 'url'; url: string }
+  | { kind: 'email'; url: string }
+  | { kind: 'tel'; url: string }
+  | null;
+
+function detectAction(raw: string): SmartAction {
+  const text = raw.trim();
+  if (!text || text.length > 2000) return null;
+  if (/^https?:\/\/\S+$/i.test(text)) return { kind: 'url', url: text };
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text)) {
+    return { kind: 'email', url: `mailto:${text}` };
+  }
+  if (/^\+?[\d][\d\s().\-]{6,}$/.test(text)) {
+    return { kind: 'tel', url: `tel:${text.replace(/[^\d+]/g, '')}` };
+  }
+  return null;
+}
 
 type Snippet = {
   id: string;
@@ -43,17 +65,25 @@ export default function App() {
   const [snippets, setSnippets] = useState<Snippet[]>([]);
   const [snippetsLoaded, setSnippetsLoaded] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [draftLabel, setDraftLabel] = useState('');
   const [draftText, setDraftText] = useState('');
+  const [editMode, setEditMode] = useState(false);
   const entriesRef = useRef<Entry[]>([]);
   const internalCopyRef = useRef<string | null>(null);
 
   const trimmedQuery = query.trim();
+  const sortedEntries = useMemo(() => {
+    return [...entries].sort((a, b) => {
+      if (!!a.pinned !== !!b.pinned) return a.pinned ? -1 : 1;
+      return b.copiedAt - a.copiedAt;
+    });
+  }, [entries]);
   const visible = trimmedQuery
-    ? entries.filter((e) =>
+    ? sortedEntries.filter((e) =>
         e.text.toLowerCase().includes(trimmedQuery.toLowerCase()),
       )
-    : entries;
+    : sortedEntries;
   const isFiltering = trimmedQuery.length > 0;
 
   useEffect(() => {
@@ -110,13 +140,20 @@ export default function App() {
         return;
       }
       const current = entriesRef.current;
-      if (current[0]?.text === text) return;
+      const newestUnpinned = current.find((e) => !e.pinned);
+      if (newestUnpinned?.text === text) return;
       const next: Entry = {
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         text,
         copiedAt: Date.now(),
       };
-      setEntries((prev) => [next, ...prev].slice(0, MAX_ENTRIES));
+      setEntries((prev) => {
+        const all = [next, ...prev];
+        const pinned = all.filter((e) => e.pinned);
+        const unpinned = all.filter((e) => !e.pinned);
+        const maxUnpinned = Math.max(0, MAX_ENTRIES - pinned.length);
+        return [...unpinned.slice(0, maxUnpinned), ...pinned];
+      });
     } catch (e) {
       console.warn('Failed to read clipboard', e);
     }
@@ -145,31 +182,70 @@ export default function App() {
   const copyBack = useCallback(async (text: string) => {
     internalCopyRef.current = text;
     await Clipboard.setStringAsync(text);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+  }, []);
+
+  const togglePin = useCallback((id: string) => {
+    setEntries((prev) =>
+      prev.map((e) => (e.id === id ? { ...e, pinned: !e.pinned } : e)),
+    );
+    Haptics.selectionAsync().catch(() => {});
+  }, []);
+
+  const openSmartAction = useCallback(async (action: SmartAction) => {
+    if (!action) return;
+    try {
+      await Linking.openURL(action.url);
+    } catch (e) {
+      console.warn('Failed to open URL', e);
+    }
   }, []);
 
   const deleteEntry = useCallback((id: string) => {
     setEntries((prev) => prev.filter((e) => e.id !== id));
   }, []);
 
+  const openAddSnippet = useCallback(() => {
+    setEditingId(null);
+    setDraftLabel('');
+    setDraftText('');
+    setAddOpen(true);
+  }, []);
+
+  const openEditSnippet = useCallback((snippet: Snippet) => {
+    setEditingId(snippet.id);
+    setDraftLabel(snippet.label);
+    setDraftText(snippet.text);
+    setAddOpen(true);
+  }, []);
+
   const saveSnippet = useCallback(() => {
     const label = draftLabel.trim();
     const text = draftText;
     if (!label || !text) return;
-    const next: Snippet = {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      label,
-      text,
-      createdAt: Date.now(),
-    };
-    setSnippets((prev) => [next, ...prev]);
+    if (editingId) {
+      setSnippets((prev) =>
+        prev.map((s) => (s.id === editingId ? { ...s, label, text } : s)),
+      );
+    } else {
+      const next: Snippet = {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        label,
+        text,
+        createdAt: Date.now(),
+      };
+      setSnippets((prev) => [next, ...prev]);
+    }
     setDraftLabel('');
     setDraftText('');
+    setEditingId(null);
     setAddOpen(false);
-  }, [draftLabel, draftText]);
+  }, [draftLabel, draftText, editingId]);
 
   const cancelSnippet = useCallback(() => {
     setDraftLabel('');
     setDraftText('');
+    setEditingId(null);
     setAddOpen(false);
   }, []);
 
@@ -183,7 +259,11 @@ export default function App() {
           text: 'Delete',
           style: 'destructive',
           onPress: () =>
-            setSnippets((prev) => prev.filter((s) => s.id !== snippet.id)),
+            setSnippets((prev) => {
+              const next = prev.filter((s) => s.id !== snippet.id);
+              if (next.length === 0) setEditMode(false);
+              return next;
+            }),
         },
       ],
     );
@@ -250,7 +330,7 @@ export default function App() {
           style={styles.snippetsScroll}
         >
           <Pressable
-            onPress={() => setAddOpen(true)}
+            onPress={openAddSnippet}
             style={({ pressed }) => [
               styles.addChip,
               pressed && styles.addChipPressed,
@@ -258,20 +338,55 @@ export default function App() {
           >
             <Text style={styles.addChipText}>+ Saved</Text>
           </Pressable>
+          {snippets.length > 0 && (
+            <Pressable
+              onPress={() => setEditMode((v) => !v)}
+              style={({ pressed }) => [
+                styles.editChip,
+                editMode && styles.editChipActive,
+                pressed && styles.editChipPressed,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.editChipText,
+                  editMode && styles.editChipTextActive,
+                ]}
+              >
+                {editMode ? 'Done' : 'Edit'}
+              </Text>
+            </Pressable>
+          )}
           {snippets.map((s) => (
             <Pressable
               key={s.id}
-              onPress={() => copyBack(s.text)}
-              onLongPress={() => deleteSnippet(s)}
-              delayLongPress={350}
+              onPress={() =>
+                editMode ? openEditSnippet(s) : copyBack(s.text)
+              }
               style={({ pressed }) => [
                 styles.chip,
-                pressed && styles.chipPressed,
+                editMode && styles.chipEditing,
+                pressed && (editMode ? styles.chipEditingPressed : styles.chipPressed),
               ]}
             >
-              <Text style={styles.chipText} numberOfLines={1}>
+              <Text
+                style={[styles.chipText, editMode && styles.chipTextEditing]}
+                numberOfLines={1}
+              >
                 {s.label}
               </Text>
+              {editMode && (
+                <Pressable
+                  onPress={() => deleteSnippet(s)}
+                  hitSlop={10}
+                  style={({ pressed }) => [
+                    styles.chipDelete,
+                    pressed && styles.chipDeletePressed,
+                  ]}
+                >
+                  <Text style={styles.chipDeleteText}>×</Text>
+                </Pressable>
+              )}
             </Pressable>
           ))}
         </ScrollView>
@@ -296,34 +411,75 @@ export default function App() {
             </Text>
           </View>
         }
-        renderItem={({ item }) => (
-          <View style={styles.row}>
-            <Pressable
-              style={({ pressed }) => [
-                styles.rowMain,
-                pressed && styles.rowPressed,
-              ]}
-              onPress={() => copyBack(item.text)}
-            >
-              <Text style={styles.rowText} numberOfLines={4}>
-                {item.text}
-              </Text>
-              <Text style={styles.rowMeta}>
-                {formatTime(item.copiedAt)} · tap to copy
-              </Text>
-            </Pressable>
-            <Pressable
-              onPress={() => deleteEntry(item.id)}
-              style={({ pressed }) => [
-                styles.deleteBtn,
-                pressed && styles.deleteBtnPressed,
-              ]}
-              hitSlop={8}
-            >
-              <Text style={styles.deleteBtnText}>×</Text>
-            </Pressable>
-          </View>
-        )}
+        renderItem={({ item }) => {
+          const action = detectAction(item.text);
+          return (
+            <View style={styles.row}>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.rowMain,
+                  pressed && styles.rowPressed,
+                ]}
+                onPress={() => copyBack(item.text)}
+              >
+                <Text style={styles.rowText} numberOfLines={4}>
+                  {item.text}
+                </Text>
+                <View style={styles.rowFooter}>
+                  <Text style={styles.rowMeta}>
+                    {item.pinned ? '★ ' : ''}
+                    {formatTime(item.copiedAt)} · tap to copy
+                  </Text>
+                  {action && (
+                    <Pressable
+                      onPress={() => openSmartAction(action)}
+                      style={({ pressed }) => [
+                        styles.actionBtn,
+                        pressed && styles.actionBtnPressed,
+                      ]}
+                      hitSlop={6}
+                    >
+                      <Text style={styles.actionBtnText}>
+                        {action.kind === 'url'
+                          ? 'Open'
+                          : action.kind === 'email'
+                            ? 'Mail'
+                            : 'Call'}
+                      </Text>
+                    </Pressable>
+                  )}
+                </View>
+              </Pressable>
+              <Pressable
+                onPress={() => togglePin(item.id)}
+                style={({ pressed }) => [
+                  styles.pinBtn,
+                  pressed && styles.pinBtnPressed,
+                ]}
+                hitSlop={8}
+              >
+                <Text
+                  style={[
+                    styles.pinBtnText,
+                    item.pinned && styles.pinBtnTextActive,
+                  ]}
+                >
+                  {item.pinned ? '★' : '☆'}
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => deleteEntry(item.id)}
+                style={({ pressed }) => [
+                  styles.deleteBtn,
+                  pressed && styles.deleteBtnPressed,
+                ]}
+                hitSlop={8}
+              >
+                <Text style={styles.deleteBtnText}>×</Text>
+              </Pressable>
+            </View>
+          );
+        }}
       />
 
       <Modal
@@ -338,7 +494,9 @@ export default function App() {
         >
           <Pressable style={styles.modalBackdropTouch} onPress={cancelSnippet}>
             <Pressable style={styles.modalCard} onPress={() => {}}>
-              <Text style={styles.modalTitle}>New snippet</Text>
+              <Text style={styles.modalTitle}>
+                {editingId ? 'Edit snippet' : 'New snippet'}
+              </Text>
               <Text style={styles.modalHint}>
                 Save text you copy often — email, phone, address, anything.
               </Text>
@@ -471,14 +629,69 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: '#111',
     maxWidth: 180,
-    justifyContent: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   chipPressed: {
     backgroundColor: '#333',
   },
+  chipEditing: {
+    backgroundColor: '#fff',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: '#b8b8c0',
+    paddingRight: 4,
+  },
+  chipEditingPressed: {
+    backgroundColor: '#eaeaef',
+  },
   chipText: {
     fontSize: 13,
     fontWeight: '600',
+    color: '#fff',
+  },
+  chipTextEditing: {
+    color: '#111',
+  },
+  chipDelete: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#b00020',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
+  },
+  chipDeletePressed: {
+    backgroundColor: '#8a0019',
+  },
+  chipDeleteText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+    lineHeight: 18,
+    marginTop: -2,
+  },
+  editChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: '#3478f6',
+    backgroundColor: 'transparent',
+    justifyContent: 'center',
+  },
+  editChipActive: {
+    backgroundColor: '#3478f6',
+  },
+  editChipPressed: {
+    backgroundColor: '#dde7fa',
+  },
+  editChipText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#3478f6',
+  },
+  editChipTextActive: {
     color: '#fff',
   },
   modalBackdrop: {
@@ -601,10 +814,49 @@ const styles = StyleSheet.create({
     color: '#111',
     lineHeight: 20,
   },
+  rowFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 6,
+    gap: 8,
+  },
   rowMeta: {
     fontSize: 12,
     color: '#888',
-    marginTop: 6,
+    flexShrink: 1,
+  },
+  actionBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+    backgroundColor: '#e8f0fe',
+  },
+  actionBtnPressed: {
+    backgroundColor: '#cfdcf7',
+  },
+  actionBtnText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#1a56d8',
+  },
+  pinBtn: {
+    width: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderLeftWidth: StyleSheet.hairlineWidth,
+    borderLeftColor: '#e0e0e5',
+  },
+  pinBtnPressed: {
+    backgroundColor: '#f5f5f7',
+  },
+  pinBtnText: {
+    fontSize: 18,
+    color: '#bbb',
+    lineHeight: 20,
+  },
+  pinBtnTextActive: {
+    color: '#f5a623',
   },
   deleteBtn: {
     width: 44,
