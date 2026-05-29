@@ -8,11 +8,11 @@
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.kiddkevin00.copyhistory",
+      "bundleIdentifier": "com.markutilitylabs.copyhistory",
       "buildNumber": "1"
     },
     "android": {
-      "package": "com.kiddkevin00.copyhistory",
+      "package": "com.markutilitylabs.copyhistory",
       "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
