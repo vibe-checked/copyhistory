@@ -1,15 +1,19 @@
 {
   "expo": {
-    "name": "copyhistory",
+    "name": "Copy History",
     "slug": "copyhistory",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": false,
+      "bundleIdentifier": "com.kiddkevin00.copyhistory",
+      "buildNumber": "1"
     },
     "android": {
+      "package": "com.kiddkevin00.copyhistory",
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
