@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Copy History — Every copy, kept.</title>
-<meta name="description" content="A private clipboard history for iPhone. Anything you copy while the app is open stays here so you can find it again — quietly, with no account, no server, no telemetry." />
+<title>Copy History — Every copy. Kept quietly.</title>
+<meta name="description" content="A private clipboard history for iPhone. Anything you copy while the app is foregrounded stays here — on-device, never sent anywhere." />
 <meta name="theme-color" content="#f7f4ec" />
 <link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin /><link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400..600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="app.css" />
@@ -22,8 +22,8 @@
 
   <section class="hero" aria-labelledby="hero-title">
     <p class="hero-eyebrow"><span class="beta-badge">Now in beta · iOS via Expo Go</span></p>
-    <h1 id="hero-title">Every copy, kept.</h1>
-    <p class="lede">A private clipboard history for iPhone. Anything you copy while the app is open stays here so you can find it again — quietly, with no account, no server, no telemetry.</p>
+    <h1 id="hero-title">Every copy. Kept quietly.</h1>
+    <p class="lede">A private clipboard history for iPhone. Anything you copy while the app is foregrounded stays here — on-device, never sent anywhere.</p>
     <div class="cta-row">
       <a class="cta-primary" href="https://github.com/kiddkevin00/copyhistory" rel="noopener" target="_blank">★ Star on GitHub</a>
       <a class="cta-secondary" href="#howtoplay">How it works →</a>
@@ -36,12 +36,12 @@
     <h2 id="features-h">What's in the build</h2>
     <p class="subhead">The whole feature set, plainly listed — no upsells gating the basics.</p>
     <div class="feature-grid">
-      <article class="feature-card"><span class="feature-icon">✓</span><h3>Foreground capture</h3><p>While the app is open, anything you copy from another app is captured automatically — no setup, no signing in.</p></article>
-      <article class="feature-card"><span class="feature-icon">☆</span><h3>Pin what matters</h3><p>Star entries to protect them from the 500-cap eviction. Pinned items always sort to the top.</p></article>
-      <article class="feature-card"><span class="feature-icon">⇢</span><h3>Smart actions</h3><p>If an entry looks like a URL, email, or phone number, an inline action appears to open it directly.</p></article>
-      <article class="feature-card"><span class="feature-icon">◧</span><h3>Saved snippets</h3><p>Hand-curate reusable text (email, phone, address) above the auto-history. Snippets never expire.</p></article>
-      <article class="feature-card"><span class="feature-icon">⌕</span><h3>Live search</h3><p>Type to filter. Subtitle shows "N of M" when filtering. Empty state explains zero matches versus zero copies.</p></article>
-      <article class="feature-card"><span class="feature-icon">⊘</span><h3>No banners</h3><p>No analytics, no third-party SDKs, no network requests for your data. The clipboard never leaves your phone.</p></article>
+      <article class="feature-card"><span class="feature-icon">✱</span><h3>Auto-capture</h3><p>While the app is open, anything you copy from another app lands in the list — newest first.</p></article>
+      <article class="feature-card"><span class="feature-icon">★</span><h3>Pin to keep</h3><p>Pinned entries are exempt from the 500-entry cap, so important copies never fall off.</p></article>
+      <article class="feature-card"><span class="feature-icon">❐</span><h3>Saved snippets</h3><p>Hand-curate the stuff you copy often — email, phone, address — and they live above the history.</p></article>
+      <article class="feature-card"><span class="feature-icon">↗</span><h3>Smart actions</h3><p>URLs, emails and phone numbers get an inline Open / Mail / Call button beside the timestamp.</p></article>
+      <article class="feature-card"><span class="feature-icon">⌕</span><h3>Live search</h3><p>Filter the list as you type. The subtitle shows N-of-M so you always know what's hidden.</p></article>
+      <article class="feature-card"><span class="feature-icon">✦</span><h3>Zero telemetry</h3><p>No analytics, no third-party SDKs, no network calls. The Privacy Nutrition Label is honestly 'Data Not Collected'.</p></article>
     </div>
   </section>
 
@@ -50,10 +50,11 @@
     <h2 id="howto-h">From cold-start to good-at-it</h2>
     <p class="subhead">A few short steps. The app gets out of your way after that.</p>
     <div class="steps-grid">
-      <article class="step-card"><span class="step-num">01</span><h3>Open Copy History</h3><p>Keep the app open while you work. Every new copy is captured into the list automatically.</p></article>
-      <article class="step-card"><span class="step-num">02</span><h3>Tap to recopy</h3><p>Any entry can be tapped to put it back on the clipboard. Re-copies do not create a duplicate entry.</p></article>
-      <article class="step-card"><span class="step-num">03</span><h3>Pin or save</h3><p>Pin frequent items with ★. For frequently-typed text, tap + Saved to make a labeled snippet.</p></article>
-      <article class="step-card"><span class="step-num">04</span><h3>Search when it gets long</h3><p>Use the search field to filter to anything that contains your query. Clear it to see everything again.</p></article>
+      <article class="step-card"><span class="step-num">01</span><h3>Open the app</h3><p>While Copy History is in the foreground, iOS will let it read the clipboard. New copies are captured automatically.</p></article>
+      <article class="step-card"><span class="step-num">02</span><h3>Tap to re-copy</h3><p>Any entry in the list, tap it and the text goes straight back to your clipboard.</p></article>
+      <article class="step-card"><span class="step-num">03</span><h3>Pin the keepers</h3><p>Tap the ★ to mark an entry. Pinned entries sit on top and are protected from eviction.</p></article>
+      <article class="step-card"><span class="step-num">04</span><h3>Save reusable snippets</h3><p>Tap + Saved above the search box to make a labelled template — email, phone, address, anything you paste often.</p></article>
+      <article class="step-card"><span class="step-num">05</span><h3>Use smart actions</h3><p>If an entry is a URL, email, or phone number, an Open / Mail / Call button appears. Tap it to hand off to the system.</p></article>
     </div>
   </section>
 
@@ -61,7 +62,7 @@
     <p class="eyebrow">Screenshots</p>
     <h2 id="shots-h">What it looks like on a phone</h2>
     <p class="subhead">Captured from the running app at iPhone 14 viewport.</p>
-    <div class="shots-empty">Screenshots from the running app are coming soon.</div>
+    <div class="shots-grid"><figure class="shot-card"><img src="screenshots/01-history.png" alt="History list — pinned items, smart actions, and saved snippets above the search box. screenshot" loading="lazy" /><figcaption class="shot-caption"><span class="n">01</span><span>History list — pinned items, smart actions, and saved snippets above the search box.</span></figcaption></figure><figure class="shot-card"><img src="screenshots/02-saved.png" alt="Search filters the list live. The subtitle shows N-of-M so nothing is invisible. screenshot" loading="lazy" /><figcaption class="shot-caption"><span class="n">02</span><span>Search filters the list live. The subtitle shows N-of-M so nothing is invisible.</span></figcaption></figure></div>
   </section>
 
   <footer class="colophon">

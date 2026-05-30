@@ -162,6 +162,11 @@ export default function App() {
   useEffect(() => {
     if (!loaded) return;
     captureCurrentClipboard();
+    // expo-clipboard's web shim doesn't implement addClipboardListener.
+    // Guard so the app can still run via expo-web for screenshots / preview.
+    if (Platform.OS === 'web' || typeof Clipboard.addClipboardListener !== 'function') {
+      return;
+    }
     const sub = Clipboard.addClipboardListener(({ contentTypes }) => {
       if (contentTypes.includes(Clipboard.ContentType.PLAIN_TEXT)) {
         captureCurrentClipboard();

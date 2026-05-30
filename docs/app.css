@@ -2,7 +2,7 @@
 
 :root {
   --bg:          #f7f4ec;
-  --surface:     #fffefb;
+  --surface:     #ffffff;
   --ink:         #1a1815;
   --ink-muted:   #5a554c;
   --ink-subtle:  #968f80;
@@ -13,7 +13,7 @@
   --accent-rgb:  166, 71, 26;
 
   --font-display: 'Newsreader', 'Iowan Old Style', Georgia, serif;
-  --font-body:    'IBM Plex Sans', -apple-system, system-ui, sans-serif;
+  --font-body:    'IBM Plex Sans', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
   --font-mono:    'IBM Plex Mono', ui-monospace, Menlo, monospace;
 
   --shadow-card: 0 1px 2px rgba(0,0,0,0.05), 0 10px 24px -12px rgba(0,0,0,0.12);
