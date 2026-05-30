@@ -1,119 +1,77 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Copy History — Support</title>
-  <meta name="description" content="Support and FAQ for Copy History, a private on-device clipboard history for iPhone." />
-  <meta name="theme-color" content="#f7f4ec" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400..600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css" />
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Copy History — Every copy, kept.</title>
+<meta name="description" content="A private clipboard history for iPhone. Anything you copy while the app is open stays here so you can find it again — quietly, with no account, no server, no telemetry." />
+<meta name="theme-color" content="#f7f4ec" />
+<link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin /><link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400..600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="app.css" />
 </head>
 <body>
 <div class="page">
+  <header class="topnav">
+  <a class="brand" href="./" aria-label="Copy History home">
+    <span class="mark">CH</span>
+    Copy History
+    <span class="version">v1.0.0</span>
+  </a>
+  <nav class="nav-links" aria-label="Primary"><a href="#features" aria-current="page">Features</a><a href="#howtoplay">How to play</a><a href="support.html">Support</a><a href="privacy.html">Privacy</a><a href="https://github.com/kiddkevin00/copyhistory" rel="noopener" target="_blank">GitHub</a></nav>
+</header>
 
-  <!-- masthead -->
-  <header class="masthead">
-    <a class="wordmark" href="./" aria-label="Copy History home">
-      <svg class="mark" viewBox="0 0 24 24" aria-hidden="true">
-        <rect x="3.2" y="3.2" width="13" height="15.5" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.5"/>
-        <rect x="7.8" y="7.8" width="13" height="15.5" rx="1.6" fill="var(--paper)" stroke="currentColor" stroke-width="1.5"/>
-      </svg>
-      Copy <em>History</em>
-    </a>
-    <nav class="topnav" aria-label="Primary">
-      <a href="./" aria-current="page">Support</a>
-      <a href="privacy.html">Privacy</a>
-      <a href="https://github.com/kiddkevin00/copyhistory">GitHub</a>
-    </nav>
-  </header>
-
-  <!-- mast -->
-  <section class="mast" aria-labelledby="mast-title">
-    <p class="eyebrow">Support<span class="dot"></span>The manual</p>
-    <h1 class="display" id="mast-title">
-      Copy<br>
-      <em>History<span class="punct">.</span></em>
-    </h1>
-    <div class="mast-rule" aria-hidden="true"></div>
-    <p class="lede">A private clipboard history for iPhone. Anything you copy while the app is open stays here, on-device, so you can find it again — <em>quietly, with no account, no server, no telemetry.</em></p>
-    <p class="meta">v1.0.0<span class="sep">·</span>iPhone<span class="sep">·</span>iOS 16+</p>
+  <section class="hero" aria-labelledby="hero-title">
+    <p class="hero-eyebrow"><span class="beta-badge">Now in beta · iOS via Expo Go</span></p>
+    <h1 id="hero-title">Every copy, kept.</h1>
+    <p class="lede">A private clipboard history for iPhone. Anything you copy while the app is open stays here so you can find it again — quietly, with no account, no server, no telemetry.</p>
+    <div class="cta-row">
+      <a class="cta-primary" href="https://github.com/kiddkevin00/copyhistory" rel="noopener" target="_blank">★ Star on GitHub</a>
+      <a class="cta-secondary" href="#howtoplay">How it works →</a>
+    </div>
+    <p class="trust-row"><span>Offline-first</span><span>No ads</span><span>No accounts</span><span>Open source</span></p>
   </section>
 
-  <!-- sections -->
-  <main>
-
-    <article class="doc" id="how-it-works">
-      <aside class="doc-num" aria-hidden="true">01</aside>
-      <section class="doc-body">
-        <p class="doc-eyebrow">Overview</p>
-        <h2>How it works</h2>
-        <p>While Copy History is open, anything you copy from another app is captured automatically — no setup, no sign-in, no permissions to grant beyond iOS's standard paste prompt.</p>
-        <ul>
-          <li>Tap any entry to copy it back to the clipboard.</li>
-          <li>Pin entries (<strong>★</strong>) you want to keep — pinned items aren't evicted when the 500-entry cap is reached.</li>
-          <li>Save reusable snippets (email, phone, address) above the history. Saved snippets stay forever until you delete them.</li>
-          <li>If an entry looks like a URL, email, or phone number, an inline action appears so you can open it directly.</li>
-        </ul>
-      </section>
-    </article>
-
-    <article class="doc" id="paste-banner">
-      <aside class="doc-num" aria-hidden="true">02</aside>
-      <section class="doc-body">
-        <p class="doc-eyebrow">iOS behavior</p>
-        <h2>Why does iOS show a paste banner?</h2>
-        <p>iOS shows a <strong>"Copy History pasted from…"</strong> banner whenever any app reads the clipboard. This is an iOS-wide privacy feature — Copy History can't disable it.</p>
-        <p>You can stop the banners by going to <span class="kbd">Settings → Apps → Copy History → Paste from Other Apps → Allow</span>. The option appears after iOS prompts you the first time.</p>
-      </section>
-    </article>
-
-    <article class="doc" id="background">
-      <aside class="doc-num" aria-hidden="true">03</aside>
-      <section class="doc-body">
-        <p class="doc-eyebrow">iOS behavior</p>
-        <h2>Why aren't copies captured when the app is closed?</h2>
-        <p>iOS does not allow apps to read the clipboard in the background. Copy History only captures while the app is in the foreground. Bring the app to the front when you want to save something new.</p>
-      </section>
-    </article>
-
-    <article class="doc" id="storage">
-      <aside class="doc-num" aria-hidden="true">04</aside>
-      <section class="doc-body">
-        <p class="doc-eyebrow">Data</p>
-        <h2>Where is my history stored?</h2>
-        <p>All entries live on your device only. Nothing is sent to a server, nothing is synced to iCloud, nothing is shared with third parties. See the <a href="privacy.html">privacy policy</a> for the full account.</p>
-      </section>
-    </article>
-
-  </main>
-
-  <!-- contact -->
-  <aside class="contact-card" aria-labelledby="contact-h">
-    <p class="eyebrow">Card<span class="dot"></span>No. 01</p>
-    <h3 id="contact-h">Need help, or want to <em>report a bug</em>?</h3>
-    <p>Open an issue on GitHub. There's no support email — issues are the canonical channel and they're public, which keeps everything honest.</p>
-    <p class="link-row"><a href="https://github.com/kiddkevin00/copyhistory/issues">github.com/kiddkevin00/copyhistory/issues</a></p>
-  </aside>
-
-  <!-- footer -->
-  <footer class="colophon">
-    <div class="colophon-left">
-      <svg class="mark" viewBox="0 0 24 24" aria-hidden="true">
-        <rect x="3.2" y="3.2" width="13" height="15.5" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.5"/>
-        <rect x="7.8" y="7.8" width="13" height="15.5" rx="1.6" fill="var(--paper)" stroke="currentColor" stroke-width="1.5"/>
-      </svg>
-      Copy <em>History</em> · Mark Utility Labs
+  <section id="features" aria-labelledby="features-h">
+    <p class="eyebrow">Features</p>
+    <h2 id="features-h">What's in the build</h2>
+    <p class="subhead">The whole feature set, plainly listed — no upsells gating the basics.</p>
+    <div class="feature-grid">
+      <article class="feature-card"><span class="feature-icon">✓</span><h3>Foreground capture</h3><p>While the app is open, anything you copy from another app is captured automatically — no setup, no signing in.</p></article>
+      <article class="feature-card"><span class="feature-icon">☆</span><h3>Pin what matters</h3><p>Star entries to protect them from the 500-cap eviction. Pinned items always sort to the top.</p></article>
+      <article class="feature-card"><span class="feature-icon">⇢</span><h3>Smart actions</h3><p>If an entry looks like a URL, email, or phone number, an inline action appears to open it directly.</p></article>
+      <article class="feature-card"><span class="feature-icon">◧</span><h3>Saved snippets</h3><p>Hand-curate reusable text (email, phone, address) above the auto-history. Snippets never expire.</p></article>
+      <article class="feature-card"><span class="feature-icon">⌕</span><h3>Live search</h3><p>Type to filter. Subtitle shows "N of M" when filtering. Empty state explains zero matches versus zero copies.</p></article>
+      <article class="feature-card"><span class="feature-icon">⊘</span><h3>No banners</h3><p>No analytics, no third-party SDKs, no network requests for your data. The clipboard never leaves your phone.</p></article>
     </div>
-    <nav class="colophon-meta" aria-label="Footer">
-      <a href="privacy.html">Privacy</a>
-      <a href="https://github.com/kiddkevin00/copyhistory">Source</a>
-      <a href="https://github.com/kiddkevin00/copyhistory/issues">Issues</a>
-    </nav>
-  </footer>
+  </section>
 
+  <section id="howtoplay" aria-labelledby="howto-h">
+    <p class="eyebrow">How to play</p>
+    <h2 id="howto-h">From cold-start to good-at-it</h2>
+    <p class="subhead">A few short steps. The app gets out of your way after that.</p>
+    <div class="steps-grid">
+      <article class="step-card"><span class="step-num">01</span><h3>Open Copy History</h3><p>Keep the app open while you work. Every new copy is captured into the list automatically.</p></article>
+      <article class="step-card"><span class="step-num">02</span><h3>Tap to recopy</h3><p>Any entry can be tapped to put it back on the clipboard. Re-copies do not create a duplicate entry.</p></article>
+      <article class="step-card"><span class="step-num">03</span><h3>Pin or save</h3><p>Pin frequent items with ★. For frequently-typed text, tap + Saved to make a labeled snippet.</p></article>
+      <article class="step-card"><span class="step-num">04</span><h3>Search when it gets long</h3><p>Use the search field to filter to anything that contains your query. Clear it to see everything again.</p></article>
+    </div>
+  </section>
+
+  <section id="screenshots" aria-labelledby="shots-h">
+    <p class="eyebrow">Screenshots</p>
+    <h2 id="shots-h">What it looks like on a phone</h2>
+    <p class="subhead">Captured from the running app at iPhone 14 viewport.</p>
+    <div class="shots-empty">Screenshots from the running app are coming soon.</div>
+  </section>
+
+  <footer class="colophon">
+  <span class="credit">© Mark Utility Labs · Made with care.</span>
+  <nav class="colophon-links" aria-label="Footer">
+    <a href="support.html">Support</a>
+    <a href="privacy.html">Privacy</a>
+    <a href="https://github.com/kiddkevin00/copyhistory" rel="noopener" target="_blank">GitHub</a>
+  </nav>
+</footer>
 </div>
 </body>
 </html>

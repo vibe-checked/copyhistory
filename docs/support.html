@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Copy History — Support</title>
+<meta name="description" content="Support and FAQ for Copy History." />
+<meta name="theme-color" content="#f7f4ec" />
+<link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin /><link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400..600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="app.css" />
+</head>
+<body>
+<div class="page">
+  <header class="topnav">
+  <a class="brand" href="./" aria-label="Copy History home">
+    <span class="mark">CH</span>
+    Copy History
+    <span class="version">v1.0.0</span>
+  </a>
+  <nav class="nav-links" aria-label="Primary"><a href="#features">Features</a><a href="#howtoplay">How to play</a><a href="support.html" aria-current="page">Support</a><a href="privacy.html">Privacy</a><a href="https://github.com/kiddkevin00/copyhistory" rel="noopener" target="_blank">GitHub</a></nav>
+</header>
+
+  <section class="hero" style="padding-bottom:32px">
+    <p class="eyebrow">Support</p>
+    <h1 style="margin-bottom:14px">Frequently asked, honestly answered.</h1>
+    <p class="lede">If your question isn't here, open an issue on GitHub. Public, traceable, and the same channel I use for everything else.</p>
+  </section>
+
+  <section style="padding-top:0">
+    <div class="faq"><details><summary>Why does iOS show a paste banner?</summary><p>iOS shows a 'pasted from...' banner whenever any app reads the clipboard. This is a system-wide privacy feature — Copy History can't disable it. You can stop the banners in Settings → Apps → Copy History → Paste from Other Apps → Allow.</p></details><details><summary>Why aren't copies captured when the app is closed?</summary><p>iOS does not allow apps to read the clipboard in the background. Copy History only captures while the app is in the foreground. Bring the app to the front when you want to save something new.</p></details><details><summary>Where is my history stored?</summary><p>On your device only. Nothing is sent to a server, nothing syncs to iCloud, nothing is shared with third parties. The 500 most recent entries are retained; pinned entries and saved snippets aren't auto-evicted.</p></details><details><summary>Can I export my saved snippets?</summary><p>Not yet — the data is stored in the app's sandboxed AsyncStorage. Export is on the roadmap.</p></details></div>
+  </section>
+
+  <aside class="contact-card">
+    <p class="eyebrow">Get in touch</p>
+    <h3>Need help, or want to report a bug?</h3>
+    <p>Open an issue on GitHub. There's no support email — issues are the canonical channel and they're public, which keeps everything honest.</p>
+    <a href="https://github.com/kiddkevin00/copyhistory/issues" rel="noopener" target="_blank">github.com/kiddkevin00/copyhistory/issues</a>
+  </aside>
+
+  <footer class="colophon">
+  <span class="credit">© Mark Utility Labs · Made with care.</span>
+  <nav class="colophon-links" aria-label="Footer">
+    <a href="support.html">Support</a>
+    <a href="privacy.html">Privacy</a>
+    <a href="https://github.com/kiddkevin00/copyhistory" rel="noopener" target="_blank">GitHub</a>
+  </nav>
+</footer>
+</div>
+</body>
+</html>
