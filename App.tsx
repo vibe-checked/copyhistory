@@ -2,6 +2,7 @@ import { StatusBar } from 'expo-status-bar';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getPendingItems, clearPendingItems } from 'shared-storage';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
@@ -71,6 +72,7 @@ export default function App() {
   const [editMode, setEditMode] = useState(false);
   const entriesRef = useRef<Entry[]>([]);
   const internalCopyRef = useRef<string | null>(null);
+  const capturingRef = useRef(false);
 
   const trimmedQuery = query.trim();
   const sortedEntries = useMemo(() => {
@@ -131,10 +133,20 @@ export default function App() {
   }, [snippets, snippetsLoaded]);
 
   const captureCurrentClipboard = useCallback(async () => {
+    // Coalesce overlapping triggers: returning to the app can fire both the
+    // AppState "active" handler and the clipboard-change listener at once.
+    // Reading the pasteboard twice would surface two iOS paste prompts for a
+    // single copy, so only one read is allowed in flight at a time.
+    if (capturingRef.current) return;
+    capturingRef.current = true;
     try {
+      // hasStringAsync uses UIPasteboard.hasStrings — it does NOT trigger the
+      // iOS paste prompt. getStringAsync (below) is the only call that can, so
+      // bail out here whenever the pasteboard holds no string at all.
       if (!(await Clipboard.hasStringAsync())) return;
       const text = await Clipboard.getStringAsync();
-      if (!text) return;
+      // Ignore empty / whitespace-only pasteboards so we never create a blank entry.
+      if (!text || !text.trim()) return;
       if (internalCopyRef.current === text) {
         internalCopyRef.current = null;
         return;
@@ -156,12 +168,46 @@ export default function App() {
       });
     } catch (e) {
       console.warn('Failed to read clipboard', e);
+    } finally {
+      capturingRef.current = false;
+    }
+  }, []);
+
+  const drainSharedItems = useCallback(async () => {
+    try {
+      const items = await getPendingItems();
+      if (items.length === 0) return;
+      await clearPendingItems();
+      const existing = entriesRef.current;
+      const seenTexts = new Set(existing.map((e) => e.text));
+      const newEntries: Entry[] = [];
+      const now = Date.now();
+      items.forEach((text, i) => {
+        if (!text || seenTexts.has(text)) return;
+        seenTexts.add(text);
+        newEntries.push({
+          id: `${now + i}-${Math.random().toString(36).slice(2, 8)}`,
+          text,
+          copiedAt: now - (items.length - i) * 100,
+        });
+      });
+      if (newEntries.length === 0) return;
+      setEntries((prev) => {
+        const all = [...newEntries, ...prev];
+        const pinned = all.filter((e) => e.pinned);
+        const unpinned = all.filter((e) => !e.pinned);
+        const maxUnpinned = Math.max(0, MAX_ENTRIES - pinned.length);
+        return [...unpinned.slice(0, maxUnpinned), ...pinned];
+      });
+    } catch (e) {
+      console.warn('Failed to drain shared items', e);
     }
   }, []);
 
   useEffect(() => {
     if (!loaded) return;
     captureCurrentClipboard();
+    drainSharedItems();
     // expo-clipboard's web shim doesn't implement addClipboardListener.
     // Guard so the app can still run via expo-web for screenshots / preview.
     if (Platform.OS === 'web' || typeof Clipboard.addClipboardListener !== 'function') {
@@ -178,11 +224,14 @@ export default function App() {
   useEffect(() => {
     if (!loaded) return;
     const onChange = (state: AppStateStatus) => {
-      if (state === 'active') captureCurrentClipboard();
+      if (state === 'active') {
+        captureCurrentClipboard();
+        drainSharedItems();
+      }
     };
     const sub = AppState.addEventListener('change', onChange);
     return () => sub.remove();
-  }, [loaded, captureCurrentClipboard]);
+  }, [loaded, captureCurrentClipboard, drainSharedItems]);
 
   const copyBack = useCallback(async (text: string) => {
     internalCopyRef.current = text;
