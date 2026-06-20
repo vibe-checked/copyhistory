@@ -24,6 +24,7 @@ import {
 
 const STORAGE_KEY = 'copyhistory:entries:v1';
 const SNIPPETS_KEY = 'copyhistory:snippets:v1';
+const PASTE_TIP_KEY = 'copyhistory:pasteTipDismissed:v1';
 const MAX_ENTRIES = 500;
 
 type Entry = {
@@ -70,6 +71,9 @@ export default function App() {
   const [draftLabel, setDraftLabel] = useState('');
   const [draftText, setDraftText] = useState('');
   const [editMode, setEditMode] = useState(false);
+  // Hidden until we know the stored value, so it never flashes for users who
+  // already dismissed it. iOS-only — the paste prompt doesn't exist elsewhere.
+  const [pasteTipDismissed, setPasteTipDismissed] = useState(true);
   const entriesRef = useRef<Entry[]>([]);
   const internalCopyRef = useRef<string | null>(null);
   const capturingRef = useRef(false);
@@ -131,6 +135,30 @@ export default function App() {
       console.warn('Failed to persist snippets', e),
     );
   }, [snippets, snippetsLoaded]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'ios') return;
+    (async () => {
+      try {
+        const v = await AsyncStorage.getItem(PASTE_TIP_KEY);
+        if (v !== '1') setPasteTipDismissed(false);
+      } catch (e) {
+        console.warn('Failed to load paste tip state', e);
+      }
+    })();
+  }, []);
+
+  const dismissPasteTip = useCallback(() => {
+    setPasteTipDismissed(true);
+    AsyncStorage.setItem(PASTE_TIP_KEY, '1').catch(() => {});
+  }, []);
+
+  const openPasteSettings = useCallback(() => {
+    // Can't toggle "Paste from Other Apps" from code (it's a user privacy
+    // control) — deep-link to this app's Settings page so it's one tap away.
+    dismissPasteTip();
+    Linking.openSettings().catch((e) => console.warn('Failed to open settings', e));
+  }, [dismissPasteTip]);
 
   const captureCurrentClipboard = useCallback(async () => {
     // Coalesce overlapping triggers: returning to the app can fire both the
@@ -446,6 +474,39 @@ export default function App() {
         </ScrollView>
       </View>
 
+      {Platform.OS === 'ios' && !pasteTipDismissed && (
+        <View style={styles.tip}>
+          <View style={styles.tipRow}>
+            <View style={styles.tipTextWrap}>
+              <Text style={styles.tipTitle}>Skip the paste prompt</Text>
+              <Text style={styles.tipBody}>
+                Set “Paste from Other Apps” to Allow and copies are saved
+                automatically — no asking each time.
+              </Text>
+            </View>
+            <Pressable
+              onPress={dismissPasteTip}
+              hitSlop={10}
+              style={({ pressed }) => [
+                styles.tipClose,
+                pressed && styles.tipClosePressed,
+              ]}
+            >
+              <Text style={styles.tipCloseText}>×</Text>
+            </Pressable>
+          </View>
+          <Pressable
+            onPress={openPasteSettings}
+            style={({ pressed }) => [
+              styles.tipBtn,
+              pressed && styles.tipBtnPressed,
+            ]}
+          >
+            <Text style={styles.tipBtnText}>Open Settings</Text>
+          </Pressable>
+        </View>
+      )}
+
       <FlatList
         data={visible}
         keyExtractor={(item) => item.id}
@@ -626,6 +687,63 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f7',
+  },
+  tip: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    padding: 14,
+    borderRadius: 14,
+    backgroundColor: '#eef3ff',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: '#d7e2ff',
+  },
+  tipRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  tipTextWrap: {
+    flex: 1,
+    paddingRight: 8,
+  },
+  tipTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1b2a4a',
+  },
+  tipBody: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#475574',
+    marginTop: 3,
+  },
+  tipClose: {
+    marginLeft: 4,
+    marginTop: -4,
+    paddingHorizontal: 4,
+  },
+  tipClosePressed: {
+    opacity: 0.5,
+  },
+  tipCloseText: {
+    fontSize: 22,
+    lineHeight: 24,
+    color: '#8a93a8',
+  },
+  tipBtn: {
+    alignSelf: 'flex-start',
+    marginTop: 12,
+    backgroundColor: '#3478f6',
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: 9,
+  },
+  tipBtnPressed: {
+    backgroundColor: '#2a64d8',
+  },
+  tipBtnText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 13,
   },
   header: {
     paddingHorizontal: 20,
