@@ -6,11 +6,6 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#1d4ed8"
-    },
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.markutilitylabs.copyhistory",
@@ -30,7 +25,15 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "./plugins/withShareExtension"
+      "./plugins/withShareExtension",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#1d4ed8",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 220
+        }
+      ]
     ]
   }
 }
