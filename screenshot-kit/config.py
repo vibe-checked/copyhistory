@@ -34,7 +34,7 @@ PANEL_SW = 1150                         # feature-panel phone width
 #   (label, headline, raw_filename, "low"|"high", subtitle)
 #   *asterisks* emphasize a word; "low" = headline top, "high" = headline bottom
 PANELS = [
-    ("keyboard", "A *keyboard* for your copies",  "keyboard.png", "high", "Insert snippets & recent copies anywhere"),
+    ("keyboard", "A *keyboard* for your copies",  "keyboard.png", "low",  "Insert snippets & recent copies anywhere"),
     ("share",    "Save from *any* *app*",          "share.png",    "high", "Copies save automatically — or use Share"),
     ("widgets",  "Right on your *Home* *Screen*",  "widgets.png",  "low",  "Snippets & history, one tap away"),
     ("snippets", "*Snippets* you reuse most",      "snippets.png", "high", "Addresses, replies, codes — saved"),
