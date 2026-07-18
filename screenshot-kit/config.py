@@ -19,8 +19,9 @@ WATERMARK     = (255, 255, 255)         # faint background swirl color
 # Hero (screens 1+2)
 HERO_SHOT = "history.png"               # which raw to feature in the spanning hero phone
 HERO_SW   = 1125                        # hero phone width   | HERO_TILT angle | HERO_PX seam x
-HERO_TILT = -20
-HERO_PX   = 1050
+HERO_TILT = -20                         # -20 = top-left corner highest (leans right)
+HERO_SPILL = 120                        # px of the phone's right edge to spill onto screen 03
+HERO_PX   = 1050                        # (ignored when HERO_SPILL > 0)
 BULLETS = [                             # 4 value props (hero, left of phone)
     "Every copy saved automatically",
     "A keyboard for snippets & copies",
