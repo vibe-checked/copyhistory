@@ -2,7 +2,7 @@
   "expo": {
     "name": "Copy History",
     "slug": "copyhistory",
-    "version": "2.20",
+    "version": "2.21",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",

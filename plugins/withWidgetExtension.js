@@ -323,6 +323,13 @@ module.exports = function withWidgetExtension(config) {
       targetUUID
     );
 
+    // The widget target needs its OWN Frameworks build phase before linking:
+    // node-xcode's addFramework falls back to the FIRST target's Frameworks
+    // phase when the requested target has none. That silently linked
+    // AppIntents.framework (iOS 16+) into the MAIN APP, which targets iOS 15.1
+    // — so dyld killed the app at launch on every iOS 15 device.
+    project.addBuildPhase([], 'PBXFrameworksBuildPhase', 'Frameworks', targetUUID);
+
     ['WidgetKit.framework', 'SwiftUI.framework', 'AppIntents.framework'].forEach((framework) => {
       try {
         project.addFramework(framework, { target: targetUUID });
