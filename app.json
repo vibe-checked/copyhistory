@@ -51,6 +51,9 @@
       "expo-font",
       "expo-localization"
     ],
-    "locales": {}
+    "locales": {
+      "en": "./locales/en.json",
+      "ar": "./locales/ar.json"
+    }
   }
 }

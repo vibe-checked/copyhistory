@@ -1,0 +1,4 @@
+{
+  "CFBundleDisplayName": "Copy History",
+  "NSPasteboardUsageDescription": "Copy History reads your clipboard so it can save what you copy."
+}
