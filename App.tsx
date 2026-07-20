@@ -804,7 +804,7 @@ function AppContent() {
                     <View style={styles.rowFooter}>
                       <Text style={styles.rowMeta}>
                         {item.pinned ? '★ ' : ''}
-                        {formatTime(item.copiedAt)} · tap to copy
+                        {formatTime(item.copiedAt)} · {t('tapToCopy')}
                       </Text>
                       {action && (
                         <Pressable
