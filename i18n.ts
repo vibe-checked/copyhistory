@@ -54,6 +54,19 @@ const en = {
   delete: 'Delete',
   edit: 'Edit',
   searchSnippets: 'Search snippets',
+  snippetCount_one: '{{count}} snippet',
+  snippetCount_other: '{{count}} snippets',
+  addSnippet: '+ New Snippet',
+  snippetsHeaderHint: 'Save text you use often — like an email, phone number, or address — then tap any snippet below to copy it instantly.',
+  snippetsEmptyHint: 'Tap “New Snippet” to save text you reuse often, like an email address or phone number.',
+  snippetsShortHint: 'Save text you copy often — email, phone, address, anything.',
+  mockSpace: 'space',
+  smartOpen: 'Open',
+  smartMail: 'Mail',
+  smartCall: 'Call',
+  shareMessage: 'Copy History — tap “Copy History” in this Share sheet to save this text to your clipboard history.',
+  mockCopy: 'Copy',
+  mockSaveToFiles: 'Save to Files',
   labelPlaceholder: 'Label (e.g. Email)',
   textPlaceholder: 'Text to copy',
 
@@ -160,6 +173,19 @@ const ar: typeof en = {
   delete: 'حذف',
   edit: 'تعديل',
   searchSnippets: 'ابحث في المقتطفات',
+  snippetCount_one: 'مقتطف واحد',
+  snippetCount_other: '{{count}} مقتطفًا',
+  addSnippet: '+ مقتطف جديد',
+  snippetsHeaderHint: 'احفظ النصوص التي تستخدمها كثيرًا — مثل بريد إلكتروني أو رقم هاتف أو عنوان — ثم اضغط أي مقتطف بالأسفل لنسخه فورًا.',
+  snippetsEmptyHint: 'اضغط «مقتطف جديد» لحفظ النصوص التي تكررها، مثل بريد إلكتروني أو رقم هاتف.',
+  snippetsShortHint: 'احفظ النصوص التي تنسخها كثيرًا — بريد، هاتف، عنوان، أي شيء.',
+  mockSpace: 'مسافة',
+  smartOpen: 'فتح',
+  smartMail: 'بريد',
+  smartCall: 'اتصال',
+  shareMessage: 'سجل النسخ — اضغط «سجل النسخ» في قائمة المشاركة لحفظ هذا النص في سجل الحافظة.',
+  mockCopy: 'نسخ',
+  mockSaveToFiles: 'حفظ في الملفات',
   labelPlaceholder: 'الاسم (مثل: البريد)',
   textPlaceholder: 'النص المراد نسخه',
 
@@ -266,7 +292,10 @@ export function t(key: TKey, vars?: Record<string, string | number>): string {
 
 // Simple plural helper — Arabic has richer plural rules, but for the small
 // counts shown here one/other is accurate enough and reads naturally.
-export function tCount(base: 'entryCount' | 'resultCount', count: number) {
+export function tCount(
+  base: 'entryCount' | 'resultCount' | 'snippetCount',
+  count: number,
+) {
   const key = (count === 1 ? `${base}_one` : `${base}_other`) as TKey;
   return t(key, { count });
 }

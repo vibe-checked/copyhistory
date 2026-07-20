@@ -643,7 +643,7 @@ function AppContent() {
     Alert.alert(t('clearHistoryTitle'), t('clearHistoryBody'), [
       { text: t('cancel'), style: 'cancel' },
       {
-        text: 'Clear',
+        text: t('clear'),
         style: 'destructive',
         onPress: () => {
           lastCapturedTextRef.current = null;
@@ -655,10 +655,10 @@ function AppContent() {
 
   const clearAllSnippets = useCallback(() => {
     if (snippets.length === 0) return;
-    Alert.alert(t('clearSnippetsTitle'), `Delete all ${snippets.length} snippets.`, [
+    Alert.alert(t('clearSnippetsTitle'), t('clearSnippetsBody'), [
       { text: t('cancel'), style: 'cancel' },
       {
-        text: 'Clear',
+        text: t('clear'),
         style: 'destructive',
         onPress: () => setSnippets([]),
       },
@@ -769,12 +769,12 @@ function AppContent() {
             ListEmptyComponent={
               <View style={styles.empty}>
                 <Text style={styles.emptyTitle}>
-                  {isFiltering ? 'No matches' : 'No copies yet'}
+                  {isFiltering ? t('noMatches') : t('noCopiesYet')}
                 </Text>
                 <Text style={styles.emptyBody}>
                   {isFiltering
                     ? `Nothing matches "${trimmedQuery}". Clear the search to see all ${entries.length} entries.`
-                    : 'Copy text in another app, then return here. While this app is open, new copies are captured automatically.'}
+                    : t('noCopiesHint')}
                 </Text>
               </View>
             }
@@ -808,10 +808,10 @@ function AppContent() {
                         >
                           <Text style={styles.actionBtnText}>
                             {action.kind === 'url'
-                              ? 'Open'
+                              ? t('smartOpen')
                               : action.kind === 'email'
-                                ? 'Mail'
-                                : 'Call'}
+                                ? t('smartMail')
+                                : t('smartCall')}
                           </Text>
                         </Pressable>
                       )}
@@ -858,7 +858,7 @@ function AppContent() {
               <View>
                 <Text style={styles.title}>{t('snippets')}</Text>
                 <Text style={styles.subtitle}>
-                  {snippets.length} {snippets.length === 1 ? 'snippet' : 'snippets'}
+                  {tCount('snippetCount', snippets.length)}
                 </Text>
               </View>
               <Pressable
@@ -868,12 +868,11 @@ function AppContent() {
                   pressed && styles.newSnippetBtnPressed,
                 ]}
               >
-                <Text style={styles.newSnippetBtnText}>+ New Snippet</Text>
+                <Text style={styles.newSnippetBtnText}>{t('addSnippet')}</Text>
               </Pressable>
             </View>
             <Text style={styles.snippetsInstruction}>
-              Save text you use often — like an email, phone number, or
-              address — then tap any snippet below to copy it instantly.
+              {t('snippetsHeaderHint')}
             </Text>
           </View>
 
@@ -887,8 +886,7 @@ function AppContent() {
               <View style={styles.empty}>
                 <Text style={styles.emptyTitle}>{t('noSnippetsYet')}</Text>
                 <Text style={styles.emptyBody}>
-                  Tap “New Snippet” to save text you reuse often, like an
-                  email address or phone number.
+                  {t('snippetsEmptyHint')}
                 </Text>
               </View>
             }
@@ -907,7 +905,7 @@ function AppContent() {
                   <Text style={styles.snippetPreview} numberOfLines={2}>
                     {item.text}
                   </Text>
-                  <Text style={styles.rowMeta}>tap to copy</Text>
+                  <Text style={styles.rowMeta}>{t('tapToCopy')}</Text>
                 </Pressable>
                 <Pressable
                   onPress={() => openEditSnippet(item)}
@@ -997,7 +995,11 @@ function AppContent() {
                           active && styles.themeOptionTextActive,
                         ]}
                       >
-                        {opt.label}
+                        {opt.key === 'system'
+                          ? t('themeSystem')
+                          : opt.key === 'light'
+                            ? t('themeLight')
+                            : t('themeDark')}
                       </Text>
                     </Pressable>
                   );
@@ -1100,7 +1102,7 @@ function AppContent() {
                   entries.length === 0 && styles.settingsDestructiveBtnTextDisabled,
                 ]}
               >
-                Clear All History
+                {t('clearAllHistory')}
               </Text>
             </Pressable>
             <Pressable
@@ -1118,7 +1120,7 @@ function AppContent() {
                   snippets.length === 0 && styles.settingsDestructiveBtnTextDisabled,
                 ]}
               >
-                Clear All Snippets
+                {t('clearAllSnippets')}
               </Text>
             </Pressable>
           </ScrollView>
@@ -1162,10 +1164,10 @@ function AppContent() {
           <Pressable style={styles.modalBackdropTouch} onPress={cancelSnippet}>
             <Pressable style={styles.modalCard} onPress={() => {}}>
               <Text style={styles.modalTitle}>
-                {editingId ? 'Edit Snippet' : 'New Snippet'}
+                {editingId ? t('editSnippet') : t('newSnippet')}
               </Text>
               <Text style={styles.modalHint}>
-                Save text you copy often — email, phone, address, anything.
+                {t('snippetsShortHint')}
               </Text>
               <TextInput
                 value={draftLabel}
@@ -1239,7 +1241,7 @@ function AppContent() {
                 setTimeout(() => {
                   Share.share({
                     message:
-                      'Copy History — tap “Copy History” in this Share sheet to save this text to your clipboard history.',
+                      t('shareMessage'),
                   }).catch((e) => console.warn('Failed to open share sheet', e));
                 }, 350);
               }
@@ -1325,7 +1327,7 @@ function SetupMockup({ itemKey, color }: { itemKey: SetupKey; color: string }) {
             </View>
           ))}
           <View style={[styles.mockKbKey, styles.mockKbSpace]}>
-            <Text style={styles.mockKbKeyText}>space</Text>
+            <Text style={styles.mockKbKeyText}>{t('mockSpace')}</Text>
           </View>
           <View style={[styles.mockKbKey, { backgroundColor: color }]}>
             <Ionicons name="return-down-back" size={16} color="#fff" />
@@ -1338,8 +1340,8 @@ function SetupMockup({ itemKey, color }: { itemKey: SetupKey; color: string }) {
     return (
       <View style={styles.mockSheet}>
         {[
-          { icon: 'copy-outline', label: 'Copy', on: false },
-          { icon: 'folder-outline', label: 'Save to Files', on: false },
+          { icon: 'copy-outline', label: t('mockCopy'), on: false },
+          { icon: 'folder-outline', label: t('mockSaveToFiles'), on: false },
           { icon: 'time', label: 'Copy History', on: true },
         ].map((r, i) => (
           <View
