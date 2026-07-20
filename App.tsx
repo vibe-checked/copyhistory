@@ -19,6 +19,7 @@ import {
   clearPendingItems,
   setSnippets as setSharedSnippets,
   setRecentEntries as setSharedRecentEntries,
+  setLanguage as setSharedLanguage,
   isKeyboardActive,
 } from 'shared-storage';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -83,8 +84,16 @@ function applyTheme(pref: ThemePref) {
 
 // Point the dictionary at the chosen language and line up the layout direction
 // for the next launch (RTL can only be applied at startup).
+// Ionicons draw a fixed glyph, so RTL has to pick the mirrored one by hand —
+// layout mirroring alone leaves the arrow pointing the wrong way.
+const CHEVRON = I18nManager.isRTL ? 'chevron-back' : 'chevron-forward';
+
 function applyLang(lang: Lang) {
   setLang(lang);
+  // Mirror to the App Group so the extensions render in the same language.
+  setSharedLanguage(lang).catch((e) =>
+    console.warn('Failed to share language with extensions', e),
+  );
   const rtl = isRTLLang(lang);
   I18nManager.allowRTL(rtl);
   I18nManager.forceRTL(rtl);
@@ -960,7 +969,7 @@ function AppContent() {
                       <Text style={styles.setupRowTitle}>{item.title}</Text>
                       <Text style={styles.setupRowSub}>{item.subtitle}</Text>
                     </View>
-                    <Ionicons name="chevron-forward" size={18} color={dyn('#c4c4cc', '#5a5a5e')} />
+                    <Ionicons name={CHEVRON} size={18} color={dyn('#c4c4cc', '#5a5a5e')} />
                   </Pressable>
                 </View>
               ))}
@@ -1058,7 +1067,7 @@ function AppContent() {
                       </Text>
                     </View>
                     <Ionicons
-                      name="chevron-forward"
+                      name={CHEVRON}
                       size={18}
                       color={dyn('#c4c4cc', '#5a5a5e')}
                     />
@@ -1330,7 +1339,13 @@ function SetupMockup({ itemKey, color }: { itemKey: SetupKey; color: string }) {
             <Text style={styles.mockKbKeyText}>{t('mockSpace')}</Text>
           </View>
           <View style={[styles.mockKbKey, { backgroundColor: color }]}>
-            <Ionicons name="return-down-back" size={16} color="#fff" />
+            <Ionicons
+              name="return-down-back"
+              size={16}
+              color="#fff"
+              // Same glyph problem as the chevron: flip it for RTL.
+              style={I18nManager.isRTL ? { transform: [{ scaleX: -1 }] } : undefined}
+            />
           </View>
         </View>
       </View>
@@ -1452,7 +1467,7 @@ const styles = StyleSheet.create({
   },
   tipTextWrap: {
     flex: 1,
-    paddingRight: 8,
+    paddingEnd: 8,
   },
   tipTitle: {
     fontSize: 14,
@@ -1683,8 +1698,8 @@ const styles = StyleSheet.create({
     width: 52,
     alignItems: 'center',
     justifyContent: 'center',
-    borderLeftWidth: StyleSheet.hairlineWidth,
-    borderLeftColor: dyn('#e0e0e5', '#38383a'),
+    borderStartWidth: StyleSheet.hairlineWidth,
+    borderStartColor: dyn('#e0e0e5', '#38383a'),
   },
   snippetEditBtnPressed: {
     backgroundColor: dyn('#f5f5f7', '#101014'),
@@ -1698,8 +1713,8 @@ const styles = StyleSheet.create({
     width: 36,
     alignItems: 'center',
     justifyContent: 'center',
-    borderLeftWidth: StyleSheet.hairlineWidth,
-    borderLeftColor: dyn('#e0e0e5', '#38383a'),
+    borderStartWidth: StyleSheet.hairlineWidth,
+    borderStartColor: dyn('#e0e0e5', '#38383a'),
   },
   pinBtnPressed: {
     backgroundColor: dyn('#f5f5f7', '#101014'),
@@ -1716,8 +1731,8 @@ const styles = StyleSheet.create({
     width: 44,
     alignItems: 'center',
     justifyContent: 'center',
-    borderLeftWidth: StyleSheet.hairlineWidth,
-    borderLeftColor: dyn('#e0e0e5', '#38383a'),
+    borderStartWidth: StyleSheet.hairlineWidth,
+    borderStartColor: dyn('#e0e0e5', '#38383a'),
   },
   deleteBtnPressed: {
     backgroundColor: dyn('#f5f5f7', '#101014'),
@@ -1840,7 +1855,7 @@ const styles = StyleSheet.create({
   setupDivider: {
     height: StyleSheet.hairlineWidth,
     backgroundColor: dyn('#e0e0e5', '#38383a'),
-    marginLeft: 62,
+    marginStart: 62,
   },
   setupIcon: {
     width: 34,
@@ -1848,7 +1863,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 14,
+    marginEnd: 14,
   },
   setupRowText: {
     flex: 1,
@@ -1865,7 +1880,7 @@ const styles = StyleSheet.create({
   },
   settingsRowTextWrap: {
     flex: 1,
-    paddingRight: 12,
+    paddingEnd: 12,
   },
   settingsRowHint: {
     fontSize: 12,
@@ -1932,7 +1947,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginEnd: 12,
   },
   detailStepNumText: {
     color: '#fff',
@@ -2076,7 +2091,7 @@ const styles = StyleSheet.create({
   settingsDivider: {
     height: StyleSheet.hairlineWidth,
     backgroundColor: dyn('#e0e0e5', '#38383a'),
-    marginLeft: 14,
+    marginStart: 14,
   },
   settingsDestructiveBtn: {
     backgroundColor: dyn('#fee', '#3a1a1c'),

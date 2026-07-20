@@ -13,6 +13,21 @@ private let snippetsKey = "snippets"
 private let recentEntriesKey = "recentEntries"
 private let accentColor = UIColor(red: 0.20, green: 0.47, blue: 0.96, alpha: 1) // #3478f6
 
+// Extensions can't reach the app's JS translation table and only need a handful
+// of strings, so a tiny lookup keeps them in sync. Prefers the language chosen
+// in the app (shared through the App Group); falls back to the device locale.
+enum L {
+  static var isArabic: Bool {
+    if let code = UserDefaults(suiteName: suiteName)?.string(forKey: "uiLang"),
+       !code.isEmpty {
+      return code.hasPrefix("ar")
+    }
+    return (Locale.preferredLanguages.first ?? "en").hasPrefix("ar")
+  }
+  static func s(_ en: String, _ ar: String) -> String { isArabic ? ar : en }
+}
+
+
 private struct SharedSnippet: Codable {
   let id: String
   let label: String
@@ -32,7 +47,7 @@ class KeyboardViewController: UIInputViewController {
   private enum Mode { case recent, snippets }
   private var mode: Mode = .recent
 
-  private let modeControl = UISegmentedControl(items: ["Recent", "Snippets"])
+  private let modeControl = UISegmentedControl(items: [L.s("Recent", "الأخيرة"), L.s("Snippets", "المقتطفات")])
   private let scrollView = UIScrollView()
   private let pillStack = UIStackView()
   private let messageLabel = UILabel()
@@ -300,7 +315,7 @@ class KeyboardViewController: UIInputViewController {
     guard hasFullAccess else {
       scrollView.isHidden = true
       messageLabel.isHidden = false
-      messageLabel.text = "Turn on Full Access (Settings \\u{203A} General \\u{203A} Keyboard \\u{203A} Keyboards) to insert snippets and recent copies."
+      messageLabel.text = L.s("Turn on Full Access (Settings \\u{203A} General \\u{203A} Keyboard \\u{203A} Keyboards) to insert snippets and recent copies.", "فعّل «الوصول الكامل» (الإعدادات \\u{203A} عام \\u{203A} لوحة المفاتيح \\u{203A} لوحات المفاتيح) لإدراج المقتطفات والنسخ الأخيرة.")
       return
     }
 
@@ -314,7 +329,7 @@ class KeyboardViewController: UIInputViewController {
                                    copiedAt: Date().timeIntervalSince1970 * 1000), at: 0)
       }
       if recents.isEmpty {
-        showMessage("No recent copies yet \\u{2014} copy some text and it'll show here.")
+        showMessage(L.s("No recent copies yet \\u{2014} copy some text and it'll show here.", "لا توجد نسخ حديثة \\u{2014} انسخ نصًا وسيظهر هنا."))
         return
       }
       messageLabel.isHidden = true
@@ -328,7 +343,7 @@ class KeyboardViewController: UIInputViewController {
     case .snippets:
       let snippets = loadSnippets()
       if snippets.isEmpty {
-        showMessage("No snippets yet \\u{2014} add some in the Copy History app under Snippets.")
+        showMessage(L.s("No snippets yet \\u{2014} add some in the Copy History app under Snippets.", "لا توجد مقتطفات \\u{2014} أضفها من تطبيق سجل النسخ في قسم المقتطفات."))
         return
       }
       messageLabel.isHidden = true

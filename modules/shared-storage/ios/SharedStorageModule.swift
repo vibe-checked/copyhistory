@@ -45,6 +45,15 @@ public class SharedStorageModule: Module {
         atPath: dir.appendingPathComponent("kbd_active.txt").path)
     }
 
+    // The extensions have their own small string tables; share the resolved UI
+    // language so they follow an in-app override, not just the device locale.
+    AsyncFunction("setLanguage") { (code: String) in
+      guard let defaults = UserDefaults(suiteName: self.suiteName) else { return }
+      defaults.set(code, forKey: "uiLang")
+      defaults.synchronize()
+      if #available(iOS 14.0, *) { WidgetCenter.shared.reloadAllTimelines() }
+    }
+
     AsyncFunction("setSnippets") { (json: String) in
       guard let defaults = UserDefaults(suiteName: self.suiteName) else { return }
       defaults.set(json, forKey: self.snippetsKey)

@@ -75,6 +75,17 @@ struct CopyTextIntent: AppIntent {
 const WIDGET_COMPAT = `import SwiftUI
 import WidgetKit
 
+// Widget strings follow the language picked in the app (shared via App Group),
+// falling back to the device locale.
+enum L {
+  static var isArabic: Bool {
+    if let code = UserDefaults(suiteName: "group.com.markutilitylabs.copyhistory")?
+      .string(forKey: "uiLang"), !code.isEmpty { return code.hasPrefix("ar") }
+    return (Locale.preferredLanguages.first ?? "en").hasPrefix("ar")
+  }
+  static func s(_ en: String, _ ar: String) -> String { isArabic ? ar : en }
+}
+
 // One place for every "this API is too new" decision, so the widget bodies stay
 // readable and iOS 15/16 never touches an unavailable symbol.
 extension View {
@@ -140,12 +151,12 @@ struct SnippetsWidgetView: View {
   var body: some View {
     let items = Array(entry.snippets.prefix(limit))
     VStack(alignment: .leading, spacing: 6) {
-      Text("SNIPPETS")
+      Text(L.s("SNIPPETS", "المقتطفات"))
         .font(.caption2)
         .fontWeight(.bold)
         .foregroundStyle(.secondary)
       if items.isEmpty {
-        Text("No snippets yet")
+        Text(L.s("No snippets yet", "لا توجد مقتطفات بعد"))
           .font(.caption)
           .foregroundStyle(.secondary)
         Spacer()
@@ -182,8 +193,8 @@ struct SnippetsWidget: Widget {
     StaticConfiguration(kind: kind, provider: SnippetsProvider()) { entry in
       SnippetsWidgetView(entry: entry)
     }
-    .configurationDisplayName("Saved Snippets")
-    .description("Tap a snippet to copy it instantly.")
+    .configurationDisplayName(L.s("Saved Snippets", "المقتطفات المحفوظة"))
+    .description(L.s("Tap a snippet to copy it instantly.", "اضغط أي مقتطف لنسخه فورًا."))
     .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
   }
 }
@@ -227,12 +238,12 @@ struct HistoryWidgetView: View {
   var body: some View {
     let items = Array(entry.items.prefix(limit))
     VStack(alignment: .leading, spacing: 6) {
-      Text("HISTORY")
+      Text(L.s("HISTORY", "السجل"))
         .font(.caption2)
         .fontWeight(.bold)
         .foregroundStyle(.secondary)
       if items.isEmpty {
-        Text("No copies yet")
+        Text(L.s("No copies yet", "لا توجد نسخ بعد"))
           .font(.caption)
           .foregroundStyle(.secondary)
         Spacer()
@@ -263,8 +274,8 @@ struct HistoryWidget: Widget {
     StaticConfiguration(kind: kind, provider: HistoryProvider()) { entry in
       HistoryWidgetView(entry: entry)
     }
-    .configurationDisplayName("Recent History")
-    .description("Tap a copied item to copy it again instantly.")
+    .configurationDisplayName(L.s("Recent History", "السجل الأخير"))
+    .description(L.s("Tap a copied item to copy it again instantly.", "اضغط أي عنصر منسوخ لنسخه مجددًا."))
     .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
   }
 }

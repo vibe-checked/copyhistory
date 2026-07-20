@@ -24,6 +24,17 @@ const EXTENSION_BUNDLE_ID = 'com.markutilitylabs.copyhistory.CopyHistoryAction';
 
 const VIEW_CONTROLLER = `import UIKit
 
+private let suiteNameL = "group.com.markutilitylabs.copyhistory"
+// Small string table so the confirmation matches the app's language.
+enum L {
+  static var isArabic: Bool {
+    if let code = UserDefaults(suiteName: suiteNameL)?.string(forKey: "uiLang"),
+       !code.isEmpty { return code.hasPrefix("ar") }
+    return (Locale.preferredLanguages.first ?? "en").hasPrefix("ar")
+  }
+  static func s(_ en: String, _ ar: String) -> String { isArabic ? ar : en }
+}
+
 class ActionViewController: UIViewController {
   private let suiteName = "${APP_GROUP_ID}"
   private let pendingFileName = "pending_items.json"
@@ -125,7 +136,7 @@ class ActionViewController: UIViewController {
     check.translatesAutoresizingMaskIntoConstraints = false
 
     let label = UILabel()
-    label.text = "Saved!"
+    label.text = L.s("Saved!", "تم الحفظ!")
     label.textColor = .white
     label.font = .systemFont(ofSize: 20, weight: .bold)
     label.translatesAutoresizingMaskIntoConstraints = false
