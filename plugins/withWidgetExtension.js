@@ -5,7 +5,12 @@ const fs = require('fs');
 const APP_GROUP_ID = 'group.com.markutilitylabs.copyhistory';
 const EXTENSION_NAME = 'CopyHistoryWidgets';
 const EXTENSION_BUNDLE_ID = 'com.markutilitylabs.copyhistory.CopyHistoryWidgets';
-const WIDGET_DEPLOYMENT_TARGET = '17.0';
+// Matches the host app so the widgets also show up for iOS 15/16 users. The
+// interactive bits (AppIntents / Button(intent:) / containerBackground) are all
+// iOS 16-17 only, so they are gated behind #available and AppIntents is
+// WEAK-linked — on older systems the widget renders read-only and tapping it
+// opens the app instead of copying in place.
+const WIDGET_DEPLOYMENT_TARGET = '15.1';
 
 const SHARED_MODELS = `import Foundation
 
@@ -41,6 +46,10 @@ func loadSharedEntries() -> [SharedEntry] {
 const COPY_TEXT_INTENT = `import AppIntents
 import UIKit
 
+// AppIntents only exists on iOS 16+. The framework is weak-linked, so this type
+// must never be touched on older systems — every use site is behind
+// #available(iOS 17) (Button(intent:) itself needs 17).
+@available(iOS 16.0, *)
 struct CopyTextIntent: AppIntent {
   static var title: LocalizedStringResource = "Copy Text"
   static var description = IntentDescription("Copies the selected text to the clipboard.")
@@ -59,6 +68,36 @@ struct CopyTextIntent: AppIntent {
   func perform() async throws -> some IntentResult {
     UIPasteboard.general.string = text
     return .result()
+  }
+}
+`;
+
+const WIDGET_COMPAT = `import SwiftUI
+import WidgetKit
+
+// One place for every "this API is too new" decision, so the widget bodies stay
+// readable and iOS 15/16 never touches an unavailable symbol.
+extension View {
+  // containerBackground is iOS 17+; older systems paint the background directly.
+  @ViewBuilder
+  func chWidgetBackground() -> some View {
+    if #available(iOS 17.0, *) {
+      self.containerBackground(.fill.tertiary, for: .widget)
+    } else {
+      self.background(Color(UIColor.systemBackground))
+    }
+  }
+}
+
+// Tap-to-copy needs interactive widgets (iOS 17+). Below that the row is plain
+// and the whole widget deep-links into the app via .widgetURL instead.
+@ViewBuilder
+func chCopyRow<Content: View>(text: String, @ViewBuilder content: @escaping () -> Content) -> some View {
+  if #available(iOS 17.0, *) {
+    Button(intent: CopyTextIntent(text: text)) { content() }
+      .buttonStyle(.plain)
+  } else {
+    content()
   }
 }
 `;
@@ -112,7 +151,7 @@ struct SnippetsWidgetView: View {
         Spacer()
       } else {
         ForEach(Array(items.enumerated()), id: \\.element.id) { index, snippet in
-          Button(intent: CopyTextIntent(text: snippet.text)) {
+          chCopyRow(text: snippet.text) {
             VStack(alignment: .leading, spacing: 1) {
               Text(snippet.label)
                 .font(.subheadline)
@@ -125,14 +164,14 @@ struct SnippetsWidgetView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
           }
-          .buttonStyle(.plain)
           if index < items.count - 1 { Divider() }
         }
       }
     }
     .padding()
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-    .containerBackground(.fill.tertiary, for: .widget)
+    .chWidgetBackground()
+    .widgetURL(URL(string: "copyhistory://snippets"))
   }
 }
 
@@ -199,21 +238,21 @@ struct HistoryWidgetView: View {
         Spacer()
       } else {
         ForEach(Array(items.enumerated()), id: \\.element.id) { index, item in
-          Button(intent: CopyTextIntent(text: item.text)) {
+          chCopyRow(text: item.text) {
             Text(item.text)
               .font(.caption)
               .foregroundStyle(.primary)
               .lineLimit(2)
               .frame(maxWidth: .infinity, alignment: .leading)
           }
-          .buttonStyle(.plain)
           if index < items.count - 1 { Divider() }
         }
       }
     }
     .padding()
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-    .containerBackground(.fill.tertiary, for: .widget)
+    .chWidgetBackground()
+    .widgetURL(URL(string: "copyhistory://history"))
   }
 }
 
@@ -298,6 +337,7 @@ module.exports = function withWidgetExtension(config) {
     fs.mkdirSync(extDir, { recursive: true });
     const sourceFiles = {
       'SharedModels.swift': SHARED_MODELS,
+      'WidgetCompat.swift': WIDGET_COMPAT,
       'CopyTextIntent.swift': COPY_TEXT_INTENT,
       'SnippetsWidget.swift': SNIPPETS_WIDGET,
       'HistoryWidget.swift': HISTORY_WIDGET,
@@ -330,7 +370,10 @@ module.exports = function withWidgetExtension(config) {
     // — so dyld killed the app at launch on every iOS 15 device.
     project.addBuildPhase([], 'PBXFrameworksBuildPhase', 'Frameworks', targetUUID);
 
-    ['WidgetKit.framework', 'SwiftUI.framework', 'AppIntents.framework'].forEach((framework) => {
+    // AppIntents is iOS 16+ and this target now deploys to 15.1, so it must be
+    // WEAK-linked (via OTHER_LDFLAGS below) — a strong link would stop the
+    // extension loading on iOS 15, the same class of bug that crashed the app.
+    ['WidgetKit.framework', 'SwiftUI.framework'].forEach((framework) => {
       try {
         project.addFramework(framework, { target: targetUUID });
       } catch (e) {
@@ -350,6 +393,10 @@ module.exports = function withWidgetExtension(config) {
         GENERATE_INFOPLIST_FILE: 'NO',
         INFOPLIST_FILE: `"${EXTENSION_NAME}/Info.plist"`,
         IPHONEOS_DEPLOYMENT_TARGET: WIDGET_DEPLOYMENT_TARGET,
+        // Weak so the extension still loads on iOS 15, where AppIntents is
+        // absent. Must be a pbxproj LIST — a single quoted string here produces
+        // an unparseable project file.
+        OTHER_LDFLAGS: ['"$(inherited)"', '"-weak_framework"', '"AppIntents"'],
         LD_RUNPATH_SEARCH_PATHS: '"$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks"',
         PRODUCT_BUNDLE_IDENTIFIER: `"${EXTENSION_BUNDLE_ID}"`,
         PRODUCT_NAME: '"$(TARGET_NAME)"',

@@ -1,4 +1,15 @@
 import { StatusBar } from 'expo-status-bar';
+import {
+  LANG_OPTIONS,
+  Lang,
+  LangPref,
+  getLang,
+  isRTLLang,
+  resolveLang,
+  setLang,
+  t,
+  tCount,
+} from './i18n';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,8 +24,11 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
+  Appearance,
   AppState,
   AppStateStatus,
+  DynamicColorIOS,
+  I18nManager,
   FlatList,
   KeyboardAvoidingView,
   Linking,
@@ -34,13 +48,47 @@ import {
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
 
+// Dark mode. Every colour in this file goes through dyn(), so iOS swaps the
+// palette itself when the system appearance changes — no re-render, no theme
+// context, and the static StyleSheet below keeps working untouched.
+// Cast to string so existing `color: string` props (Ionicons, placeholders)
+// keep type-checking; at runtime RN accepts the dynamic colour object.
+const dyn = (light: string, dark: string) =>
+  DynamicColorIOS({ light, dark }) as unknown as string;
+
 const STORAGE_KEY = 'copyhistory:entries:v1';
 const SNIPPETS_KEY = 'copyhistory:snippets:v1';
 const PASTE_TIP_KEY = 'copyhistory:pasteTipDismissed:v1';
 const KBD_TIP_KEY = 'copyhistory:kbdTipDismissed:v1';
+const THEME_KEY = 'copyhistory:theme:v1';
+const LANG_KEY = 'copyhistory:lang:v1';
 const MAX_ENTRIES = 500;
-const APP_VERSION = '2.20';
+const APP_VERSION = '2.23';
 const APP_BUILD = '1';
+
+type ThemePref = 'system' | 'light' | 'dark';
+
+const THEME_OPTIONS: { key: ThemePref; label: string; icon: string }[] = [
+  { key: 'system', label: 'System', icon: 'phone-portrait-outline' },
+  { key: 'light', label: 'Light', icon: 'sunny-outline' },
+  { key: 'dark', label: 'Dark', icon: 'moon-outline' },
+];
+
+// Appearance.setColorScheme drives the window's overrideUserInterfaceStyle, and
+// every colour here is a DynamicColorIOS pair — so one call re-themes the whole
+// app without any re-render plumbing. null hands control back to iOS.
+function applyTheme(pref: ThemePref) {
+  Appearance.setColorScheme(pref === 'system' ? null : pref);
+}
+
+// Point the dictionary at the chosen language and line up the layout direction
+// for the next launch (RTL can only be applied at startup).
+function applyLang(lang: Lang) {
+  setLang(lang);
+  const rtl = isRTLLang(lang);
+  I18nManager.allowRTL(rtl);
+  I18nManager.forceRTL(rtl);
+}
 
 type SetupKey = 'keyboard' | 'action' | 'widget';
 
@@ -57,59 +105,43 @@ type SetupItem = {
   primaryAction: 'openSettings' | 'dismiss' | 'openShare';
 };
 
-const SETUP_ITEMS: SetupItem[] = [
+// Built per-render (not a module constant) so the strings follow the active
+// language rather than being frozen at import time.
+const getSetupItems = (): SetupItem[] => [
   {
     key: 'keyboard',
-    title: 'Keyboard',
-    subtitle: 'Insert snippets & recent copies anywhere',
+    title: t('setupKeyboardShort'),
+    subtitle: t('setupKeyboardSub'),
     icon: 'chatbox-ellipses',
-    color: '#3478f6',
-    detailTitle: 'Paste with the Keyboard',
-    detailDesc:
-      'Insert your saved snippets and recent copies while typing in any app — no switching back and forth.',
-    steps: [
-      'Tap “Open iOS Settings” below',
-      'Tap “Keyboards”',
-      'Turn on “Snippets Keyboard”',
-      'Turn on “Allow Full Access”',
-    ],
-    primaryLabel: 'Open iOS Settings',
+    color: dyn('#3478f6', '#4a90ff'),
+    detailTitle: t('setupKeyboardTitle'),
+    detailDesc: t('setupKeyboardDesc'),
+    steps: [t('kbStep1'), t('kbStep2'), t('kbStep3'), t('kbStep4')],
+    primaryLabel: t('openIosSettings'),
     primaryAction: 'openSettings',
   },
   {
     key: 'action',
-    title: 'Share Action',
-    subtitle: 'Save text from any app’s Share menu',
+    title: t('setupActionShort'),
+    subtitle: t('setupActionSub'),
     icon: 'share-outline',
-    color: '#34c759',
-    detailTitle: 'Copy from Any App',
-    detailDesc:
-      'Save text and links straight into Copy History using the Share menu in any app.',
-    steps: [
-      'Open the Share menu in any app',
-      'Tap “View More” to reveal every action',
-      'Tap “Copy History” — a “Saved!” check confirms it',
-      'Tip: “Edit Actions” → move it to Favorites so it shows up front and you can skip “View More” next time',
-    ],
-    primaryLabel: 'Try It — Open Share Sheet',
+    color: dyn('#34c759', '#32d74b'),
+    detailTitle: t('setupActionDetailTitle'),
+    detailDesc: t('setupActionDesc'),
+    steps: [t('acStep1'), t('acStep2'), t('acStep3'), t('acStep4')],
+    primaryLabel: t('setupActionPrimary'),
     primaryAction: 'openShare',
   },
   {
     key: 'widget',
-    title: 'Widgets',
-    subtitle: 'Snippets & history on your Home Screen',
+    title: t('setupWidgetShort'),
+    subtitle: t('setupWidgetSub'),
     icon: 'grid',
-    color: '#ff9500',
-    detailTitle: 'Speed Up with Widgets',
-    detailDesc:
-      'Add Copy History widgets to your Home Screen to view and copy your snippets and recent items with one tap.',
-    steps: [
-      'Touch and hold an empty area of your Home Screen',
-      'Tap the “+” in the top-left corner',
-      'Search for “Copy History”',
-      'Add the Snippets or Recent History widget',
-    ],
-    primaryLabel: 'Got it',
+    color: dyn('#ff9500', '#ff9f0a'),
+    detailTitle: t('setupWidgetDetailTitle'),
+    detailDesc: t('setupWidgetDesc'),
+    steps: [t('wgStep1'), t('wgStep2'), t('wgStep3'), t('wgStep4')],
+    primaryLabel: t('gotIt'),
     primaryAction: 'dismiss',
   },
 ];
@@ -177,6 +209,10 @@ function AppContent() {
   // the tip).
   const [kbdTipDismissed, setKbdTipDismissed] = useState(true);
   const [setupDetail, setSetupDetail] = useState<SetupKey | null>(null);
+  const [theme, setTheme] = useState<ThemePref>('system');
+  const [langPref, setLangPref] = useState<LangPref>('system');
+  // Bumped whenever the language changes so the tree re-renders with new copy.
+  const [langTick, setLangTick] = useState(0);
   const entriesRef = useRef<Entry[]>([]);
   const internalCopyRef = useRef<string | null>(null);
   const capturingRef = useRef(false);
@@ -312,6 +348,72 @@ function AppContent() {
   useEffect(() => {
     refreshKbdTip();
   }, [refreshKbdTip]);
+
+  // Restore the saved theme before first paint so the app never flashes the
+  // wrong appearance on launch.
+  useEffect(() => {
+    (async () => {
+      try {
+        const v = (await AsyncStorage.getItem(THEME_KEY)) as ThemePref | null;
+        if (v === 'light' || v === 'dark' || v === 'system') {
+          setTheme(v);
+          applyTheme(v);
+        }
+      } catch (e) {
+        console.warn('Failed to load theme', e);
+      }
+    })();
+  }, []);
+
+  // Restore the saved language (or follow the device) before first paint.
+  useEffect(() => {
+    (async () => {
+      try {
+        const v = (await AsyncStorage.getItem(LANG_KEY)) as LangPref | null;
+        const pref: LangPref =
+          v === 'en' || v === 'ar' || v === 'system' ? v : 'system';
+        setLangPref(pref);
+        applyLang(resolveLang(pref));
+        setLangTick((n) => n + 1);
+      } catch (e) {
+        console.warn('Failed to load language', e);
+      }
+    })();
+  }, []);
+
+  const chooseLang = useCallback(
+    (pref: LangPref) => {
+      const next = resolveLang(pref);
+      const wasRTL = I18nManager.isRTL;
+      setLangPref(pref);
+      applyLang(next);
+      setLangTick((n) => n + 1);
+      Haptics.selectionAsync().catch(() => {});
+      AsyncStorage.setItem(LANG_KEY, pref).catch((e) =>
+        console.warn('Failed to save language', e),
+      );
+      // forceRTL only takes effect on a fresh launch, so when the direction
+      // actually flips we have to tell the user rather than silently leaving
+      // the layout half-switched.
+      if (isRTLLang(next) !== wasRTL) {
+        Alert.alert(t('restartRequiredTitle'), t('restartRequiredBody'), [
+          { text: t('gotIt') },
+        ]);
+      }
+    },
+    [],
+  );
+
+  const setupItems = useMemo(() => getSetupItems(), [langTick]);
+
+  const chooseTheme = useCallback((pref: ThemePref) => {
+    setTheme(pref);
+    applyTheme(pref);
+    Haptics.selectionAsync().catch(() => {});
+    AsyncStorage.setItem(THEME_KEY, pref).catch((e) =>
+      console.warn('Failed to save theme', e),
+    );
+  }, []);
 
   const captureCurrentClipboard = useCallback(async () => {
     // Coalesce overlapping triggers: returning to the app can fire both the
@@ -522,12 +624,12 @@ function AppContent() {
 
   const deleteSnippet = useCallback((snippet: Snippet) => {
     Alert.alert(
-      'Delete snippet?',
+      t('deleteSnippetTitle'),
       `"${snippet.label}" will be removed.`,
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('delete'),
           style: 'destructive',
           onPress: () =>
             setSnippets((prev) => prev.filter((s) => s.id !== snippet.id)),
@@ -538,8 +640,8 @@ function AppContent() {
 
   const clearAll = useCallback(() => {
     if (entries.length === 0) return;
-    Alert.alert('Clear history?', `Delete all ${entries.length} entries.`, [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('clearHistoryTitle'), t('clearHistoryBody'), [
+      { text: t('cancel'), style: 'cancel' },
       {
         text: 'Clear',
         style: 'destructive',
@@ -553,8 +655,8 @@ function AppContent() {
 
   const clearAllSnippets = useCallback(() => {
     if (snippets.length === 0) return;
-    Alert.alert('Clear snippets?', `Delete all ${snippets.length} snippets.`, [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('clearSnippetsTitle'), `Delete all ${snippets.length} snippets.`, [
+      { text: t('cancel'), style: 'cancel' },
       {
         text: 'Clear',
         style: 'destructive',
@@ -565,22 +667,21 @@ function AppContent() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-      <StatusBar style="dark" />
+      <StatusBar style="auto" />
 
       {activeTab === 'history' && (
         <View style={styles.tabScreen}>
           <View style={styles.header}>
             <View style={styles.headerTop}>
               <View>
-                <Text style={styles.title}>Copy History</Text>
+                <Text style={styles.title}>{t('appName')}</Text>
                 <Text style={styles.subtitle}>
                   {isFiltering
-                    ? `${visible.length} of ${entries.length} ${
-                        entries.length === 1 ? 'entry' : 'entries'
-                      }`
-                    : `${entries.length} ${
-                        entries.length === 1 ? 'entry' : 'entries'
-                      }`}
+                    ? t('filteredCount', {
+                        shown: visible.length,
+                        total: entries.length,
+                      })
+                    : tCount('entryCount', entries.length)}
                 </Text>
               </View>
               <Pressable
@@ -592,15 +693,15 @@ function AppContent() {
                 ]}
                 disabled={entries.length === 0}
               >
-                <Text style={styles.clearBtnText}>Clear</Text>
+                <Text style={styles.clearBtnText}>{t('clear')}</Text>
               </Pressable>
             </View>
             <View style={styles.searchRow}>
               <TextInput
                 value={query}
                 onChangeText={setQuery}
-                placeholder="Search history"
-                placeholderTextColor="#999"
+                placeholder={t('searchHistory')}
+                placeholderTextColor={dyn('#999', '#8e8e93')}
                 style={styles.searchInput}
                 autoCorrect={false}
                 autoCapitalize="none"
@@ -616,9 +717,9 @@ function AppContent() {
               style={({ pressed }) => [styles.tip, pressed && styles.tipPressed]}
             >
               <View style={styles.tipTextWrap}>
-                <Text style={styles.tipTitle}>Skip the paste prompt ›</Text>
+                <Text style={styles.tipTitle}>{t('tipPasteTitle')}</Text>
                 <Text style={styles.tipBody} numberOfLines={2}>
-                  Allow “Paste from Other Apps” so copies save silently.
+                  {t('tipPasteBody')}
                 </Text>
               </View>
               <Pressable
@@ -640,9 +741,9 @@ function AppContent() {
               style={({ pressed }) => [styles.tip, pressed && styles.tipPressed]}
             >
               <View style={styles.tipTextWrap}>
-                <Text style={styles.tipTitle}>Try the keyboard ›</Text>
+                <Text style={styles.tipTitle}>{t('tipKeyboardTitle')}</Text>
                 <Text style={styles.tipBody} numberOfLines={2}>
-                  Insert snippets & recent copies while typing in any app.
+                  {t('tipKeyboardBody')}
                 </Text>
               </View>
               <Pressable
@@ -755,7 +856,7 @@ function AppContent() {
           <View style={styles.header}>
             <View style={styles.headerTop}>
               <View>
-                <Text style={styles.title}>Snippets</Text>
+                <Text style={styles.title}>{t('snippets')}</Text>
                 <Text style={styles.subtitle}>
                   {snippets.length} {snippets.length === 1 ? 'snippet' : 'snippets'}
                 </Text>
@@ -784,7 +885,7 @@ function AppContent() {
             }
             ListEmptyComponent={
               <View style={styles.empty}>
-                <Text style={styles.emptyTitle}>No snippets yet</Text>
+                <Text style={styles.emptyTitle}>{t('noSnippetsYet')}</Text>
                 <Text style={styles.emptyBody}>
                   Tap “New Snippet” to save text you reuse often, like an
                   email address or phone number.
@@ -816,7 +917,7 @@ function AppContent() {
                   ]}
                   hitSlop={8}
                 >
-                  <Text style={styles.snippetEditBtnText}>Edit</Text>
+                  <Text style={styles.snippetEditBtnText}>{t('edit')}</Text>
                 </Pressable>
                 <Pressable
                   onPress={() => deleteSnippet(item)}
@@ -826,7 +927,7 @@ function AppContent() {
                   ]}
                   hitSlop={8}
                 >
-                  <Ionicons name="trash-outline" size={18} color="#b00020" />
+                  <Ionicons name="trash-outline" size={18} color={dyn('#b00020', '#ff6b6b')} />
                 </Pressable>
               </View>
             )}
@@ -837,12 +938,12 @@ function AppContent() {
       {activeTab === 'settings' && (
         <View style={styles.tabScreen}>
           <View style={styles.header}>
-            <Text style={styles.title}>Settings</Text>
+            <Text style={styles.title}>{t('settings')}</Text>
           </View>
           <ScrollView contentContainerStyle={styles.settingsContent}>
-            <Text style={styles.settingsSectionTitle}>Set Up Copy History</Text>
+            <Text style={styles.settingsSectionTitle}>{t('setUpCopyHistory')}</Text>
             <View style={styles.settingsCard}>
-              {SETUP_ITEMS.map((item, i) => (
+              {setupItems.map((item, i) => (
                 <View key={item.key}>
                   {i > 0 && <View style={styles.setupDivider} />}
                   <Pressable
@@ -861,15 +962,83 @@ function AppContent() {
                       <Text style={styles.setupRowTitle}>{item.title}</Text>
                       <Text style={styles.setupRowSub}>{item.subtitle}</Text>
                     </View>
-                    <Ionicons name="chevron-forward" size={18} color="#c4c4cc" />
+                    <Ionicons name="chevron-forward" size={18} color={dyn('#c4c4cc', '#5a5a5e')} />
                   </Pressable>
                 </View>
               ))}
             </View>
 
+            <Text style={styles.settingsSectionTitle}>{t('appearance')}</Text>
+            <View style={styles.settingsCard}>
+              <View style={styles.themeRow}>
+                {THEME_OPTIONS.map((opt) => {
+                  const active = theme === opt.key;
+                  return (
+                    <Pressable
+                      key={opt.key}
+                      onPress={() => chooseTheme(opt.key)}
+                      style={({ pressed }) => [
+                        styles.themeOption,
+                        active && styles.themeOptionActive,
+                        pressed && styles.setupRowPressed,
+                      ]}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: active }}
+                      accessibilityLabel={`${opt.label} appearance`}
+                    >
+                      <Ionicons
+                        name={opt.icon as any}
+                        size={20}
+                        color={active ? '#fff' : dyn('#8a8a92', '#8e8e93')}
+                      />
+                      <Text
+                        style={[
+                          styles.themeOptionText,
+                          active && styles.themeOptionTextActive,
+                        ]}
+                      >
+                        {opt.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+
+            <Text style={styles.settingsSectionTitle}>{t('language')}</Text>
+            <View style={styles.settingsCard}>
+              <View style={styles.themeRow}>
+                {LANG_OPTIONS.map((opt) => {
+                  const active = langPref === opt.key;
+                  return (
+                    <Pressable
+                      key={opt.key}
+                      onPress={() => chooseLang(opt.key)}
+                      style={({ pressed }) => [
+                        styles.themeOption,
+                        active && styles.themeOptionActive,
+                        pressed && styles.setupRowPressed,
+                      ]}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: active }}
+                    >
+                      <Text
+                        style={[
+                          styles.themeOptionText,
+                          active && styles.themeOptionTextActive,
+                        ]}
+                      >
+                        {opt.key === 'system' ? t('themeSystem') : opt.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+
             {Platform.OS === 'ios' && (
               <>
-                <Text style={styles.settingsSectionTitle}>Clipboard</Text>
+                <Text style={styles.settingsSectionTitle}>{t('clipboard')}</Text>
                 <View style={styles.settingsCard}>
                   <Pressable
                     onPress={openAppSettings}
@@ -880,36 +1049,36 @@ function AppContent() {
                   >
                     <View style={styles.settingsRowTextWrap}>
                       <Text style={styles.settingsRowLabel}>
-                        Allow Paste from Other Apps
+                        {t('allowPasteTitle')}
                       </Text>
                       <Text style={styles.settingsRowHint}>
-                        Skip the paste prompt so copies save silently.
+                        {t('allowPasteHint')}
                       </Text>
                     </View>
                     <Ionicons
                       name="chevron-forward"
                       size={18}
-                      color="#c4c4cc"
+                      color={dyn('#c4c4cc', '#5a5a5e')}
                     />
                   </Pressable>
                 </View>
               </>
             )}
 
-            <Text style={styles.settingsSectionTitle}>Data</Text>
+            <Text style={styles.settingsSectionTitle}>{t('data')}</Text>
             <View style={styles.settingsCard}>
               <View style={styles.settingsRow}>
-                <Text style={styles.settingsRowLabel}>History entries</Text>
+                <Text style={styles.settingsRowLabel}>{t('historyEntries')}</Text>
                 <Text style={styles.settingsRowValue}>{entries.length}</Text>
               </View>
               <View style={styles.settingsDivider} />
               <View style={styles.settingsRow}>
-                <Text style={styles.settingsRowLabel}>Saved snippets</Text>
+                <Text style={styles.settingsRowLabel}>{t('savedSnippets')}</Text>
                 <Text style={styles.settingsRowValue}>{snippets.length}</Text>
               </View>
               <View style={styles.settingsDivider} />
               <View style={styles.settingsRow}>
-                <Text style={styles.settingsRowLabel}>Version</Text>
+                <Text style={styles.settingsRowLabel}>{t('version')}</Text>
                 <Text style={styles.settingsRowValue}>
                   {APP_VERSION} ({APP_BUILD})
                 </Text>
@@ -958,21 +1127,21 @@ function AppContent() {
 
       <View style={[styles.tabBar, { paddingBottom: insets.bottom + 8 }]}>
         <TabButton
-          label="History"
+          label={t('history')}
           icon="time-outline"
           activeIcon="time"
           active={activeTab === 'history'}
           onPress={() => setActiveTab('history')}
         />
         <TabButton
-          label="Snippets"
+          label={t('snippets')}
           icon="chatbox-outline"
           activeIcon="chatbox"
           active={activeTab === 'snippets'}
           onPress={() => setActiveTab('snippets')}
         />
         <TabButton
-          label="Settings"
+          label={t('settings')}
           icon="settings-outline"
           activeIcon="settings"
           active={activeTab === 'settings'}
@@ -1001,8 +1170,8 @@ function AppContent() {
               <TextInput
                 value={draftLabel}
                 onChangeText={setDraftLabel}
-                placeholder="Label (e.g. Email)"
-                placeholderTextColor="#999"
+                placeholder={t('labelPlaceholder')}
+                placeholderTextColor={dyn('#999', '#8e8e93')}
                 style={styles.modalInput}
                 autoFocus
                 maxLength={40}
@@ -1010,8 +1179,8 @@ function AppContent() {
               <TextInput
                 value={draftText}
                 onChangeText={setDraftText}
-                placeholder="Text to copy"
-                placeholderTextColor="#999"
+                placeholder={t('textPlaceholder')}
+                placeholderTextColor={dyn('#999', '#8e8e93')}
                 style={[styles.modalInput, styles.modalTextarea]}
                 multiline
                 textAlignVertical="top"
@@ -1024,7 +1193,7 @@ function AppContent() {
                     pressed && styles.modalBtnPressed,
                   ]}
                 >
-                  <Text style={styles.modalBtnText}>Cancel</Text>
+                  <Text style={styles.modalBtnText}>{t('cancel')}</Text>
                 </Pressable>
                 <Pressable
                   onPress={saveSnippet}
@@ -1039,7 +1208,7 @@ function AppContent() {
                   <Text
                     style={[styles.modalBtnText, styles.modalBtnTextPrimary]}
                   >
-                    Save
+                    {t('save')}
                   </Text>
                 </Pressable>
               </View>
@@ -1056,10 +1225,10 @@ function AppContent() {
       >
         {setupDetail && (
           <SetupDetailScreen
-            item={SETUP_ITEMS.find((s) => s.key === setupDetail)!}
+            item={setupItems.find((s) => s.key === setupDetail)!}
             onClose={() => setSetupDetail(null)}
             onPrimary={() => {
-              const action = SETUP_ITEMS.find((s) => s.key === setupDetail)!
+              const action = setupItems.find((s) => s.key === setupDetail)!
                 .primaryAction;
               setSetupDetail(null);
               if (action === 'openSettings') openAppSettings();
@@ -1103,7 +1272,7 @@ function SetupDetailScreen({
             pressed && styles.detailClosePressed,
           ]}
         >
-          <Ionicons name="close" size={22} color="#666" />
+          <Ionicons name="close" size={22} color={dyn('#666', '#aeaeb2')} />
         </Pressable>
       </View>
       <ScrollView contentContainerStyle={styles.detailContent}>
@@ -1175,12 +1344,12 @@ function SetupMockup({ itemKey, color }: { itemKey: SetupKey; color: string }) {
         ].map((r, i) => (
           <View
             key={i}
-            style={[styles.mockSheetRow, r.on && { backgroundColor: '#eaf1ff' }]}
+            style={[styles.mockSheetRow, r.on && { backgroundColor: dyn('#eaf1ff', '#16233d') }]}
           >
             <Ionicons
               name={r.icon as keyof typeof Ionicons.glyphMap}
               size={20}
-              color={r.on ? color : '#8a8a92'}
+              color={r.on ? color : dyn('#8a8a92', '#8e8e93')}
             />
             <Text style={[styles.mockSheetLabel, r.on && { color, fontWeight: '700' }]}>
               {r.label}
@@ -1195,13 +1364,13 @@ function SetupMockup({ itemKey, color }: { itemKey: SetupKey; color: string }) {
   return (
     <View style={styles.mockHome}>
       <View style={styles.mockWidget}>
-        <Text style={styles.mockWidgetTitle}>SNIPPETS</Text>
+        <Text style={styles.mockWidgetTitle}>{t('snippets').toUpperCase()}</Text>
         <View style={[styles.mockWidgetLine, { width: '70%' }]} />
         <View style={[styles.mockWidgetLine, { width: '52%' }]} />
         <View style={[styles.mockWidgetLine, { width: '60%' }]} />
       </View>
       <View style={styles.mockWidget}>
-        <Text style={styles.mockWidgetTitle}>HISTORY</Text>
+        <Text style={styles.mockWidgetTitle}>{t('history').toUpperCase()}</Text>
         <View style={[styles.mockWidgetLine, { width: '80%' }]} />
         <View style={[styles.mockWidgetLine, { width: '45%' }]} />
         <View style={[styles.mockWidgetLine, { width: '66%' }]} />
@@ -1232,7 +1401,7 @@ function TabButton({
       <Ionicons
         name={active ? activeIcon : icon}
         size={22}
-        color={active ? '#3478f6' : '#9a9aa2'}
+        color={active ? dyn('#3478f6', '#4a90ff') : dyn('#9a9aa2', '#8e8e93')}
       />
       <Text style={[styles.tabBtnText, active && styles.tabBtnTextActive]}>
         {label}
@@ -1259,7 +1428,7 @@ function formatTime(ts: number): string {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f7',
+    backgroundColor: dyn('#f5f5f7', '#101014'),
   },
   tabScreen: {
     flex: 1,
@@ -1272,12 +1441,12 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderRadius: 12,
-    backgroundColor: '#eef3ff',
+    backgroundColor: dyn('#eef3ff', '#16233d'),
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#d7e2ff',
+    borderColor: dyn('#d7e2ff', '#274063'),
   },
   tipPressed: {
-    backgroundColor: '#e3ecff',
+    backgroundColor: dyn('#e3ecff', '#1d2c4a'),
   },
   tipTextWrap: {
     flex: 1,
@@ -1286,12 +1455,12 @@ const styles = StyleSheet.create({
   tipTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#1b2a4a',
+    color: dyn('#1b2a4a', '#dce7ff'),
   },
   tipBody: {
     fontSize: 12,
     lineHeight: 16,
-    color: '#475574',
+    color: dyn('#475574', '#a9bde0'),
     marginTop: 2,
   },
   tipClose: {
@@ -1304,15 +1473,15 @@ const styles = StyleSheet.create({
   tipCloseText: {
     fontSize: 20,
     lineHeight: 22,
-    color: '#8a93a8',
+    color: dyn('#8a93a8', '#8e9bb5'),
   },
   header: {
     paddingHorizontal: 20,
     paddingTop: 12,
     paddingBottom: 12,
-    backgroundColor: '#fff',
+    backgroundColor: dyn('#fff', '#1c1c1e'),
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#d0d0d5',
+    borderBottomColor: dyn('#d0d0d5', '#48484a'),
   },
   headerTop: {
     flexDirection: 'row',
@@ -1323,31 +1492,31 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   searchInput: {
-    backgroundColor: '#f0f0f4',
+    backgroundColor: dyn('#f0f0f4', '#2c2c2e'),
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 9,
     fontSize: 15,
-    color: '#111',
+    color: dyn('#111', '#f2f2f7'),
   },
   newSnippetBtn: {
     paddingHorizontal: 14,
     paddingVertical: 9,
     borderRadius: 8,
-    backgroundColor: '#111',
+    backgroundColor: dyn('#111', '#f2f2f7'),
   },
   newSnippetBtnPressed: {
-    backgroundColor: '#333',
+    backgroundColor: dyn('#333', '#e5e5ea'),
   },
   newSnippetBtnText: {
-    color: '#fff',
+    color: dyn('#fff', '#1c1c1e'),
     fontWeight: '600',
     fontSize: 14,
   },
   snippetsInstruction: {
     fontSize: 13,
     lineHeight: 18,
-    color: '#666',
+    color: dyn('#666', '#aeaeb2'),
     marginTop: 10,
   },
   modalBackdrop: {
@@ -1360,28 +1529,28 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   modalCard: {
-    backgroundColor: '#fff',
+    backgroundColor: dyn('#fff', '#1c1c1e'),
     borderRadius: 16,
     padding: 20,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#111',
+    color: dyn('#111', '#f2f2f7'),
     marginBottom: 4,
   },
   modalHint: {
     fontSize: 13,
-    color: '#777',
+    color: dyn('#777', '#aeaeb2'),
     marginBottom: 14,
   },
   modalInput: {
-    backgroundColor: '#f0f0f4',
+    backgroundColor: dyn('#f0f0f4', '#2c2c2e'),
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 15,
-    color: '#111',
+    color: dyn('#111', '#f2f2f7'),
     marginBottom: 10,
   },
   modalTextarea: {
@@ -1398,52 +1567,52 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 8,
-    backgroundColor: '#f0f0f4',
+    backgroundColor: dyn('#f0f0f4', '#2c2c2e'),
   },
   modalBtnPressed: {
-    backgroundColor: '#e2e2ea',
+    backgroundColor: dyn('#e2e2ea', '#3a3a3c'),
   },
   modalBtnPrimary: {
-    backgroundColor: '#111',
+    backgroundColor: dyn('#111', '#f2f2f7'),
   },
   modalBtnPrimaryPressed: {
-    backgroundColor: '#333',
+    backgroundColor: dyn('#333', '#e5e5ea'),
   },
   modalBtnDisabled: {
-    backgroundColor: '#bbb',
+    backgroundColor: dyn('#bbb', '#6a6a6e'),
   },
   modalBtnText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#333',
+    color: dyn('#333', '#e5e5ea'),
   },
   modalBtnTextPrimary: {
-    color: '#fff',
+    color: dyn('#fff', '#1c1c1e'),
   },
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#111',
+    color: dyn('#111', '#f2f2f7'),
   },
   subtitle: {
     fontSize: 13,
-    color: '#666',
+    color: dyn('#666', '#aeaeb2'),
     marginTop: 2,
   },
   clearBtn: {
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 8,
-    backgroundColor: '#fee',
+    backgroundColor: dyn('#fee', '#3a1a1c'),
   },
   clearBtnPressed: {
-    backgroundColor: '#fcc',
+    backgroundColor: dyn('#fcc', '#5a2427'),
   },
   clearBtnDisabled: {
-    backgroundColor: '#eee',
+    backgroundColor: dyn('#eee', '#2c2c2e'),
   },
   clearBtnText: {
-    color: '#b00020',
+    color: dyn('#b00020', '#ff6b6b'),
     fontWeight: '600',
     fontSize: 14,
   },
@@ -1454,7 +1623,7 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'stretch',
-    backgroundColor: '#fff',
+    backgroundColor: dyn('#fff', '#1c1c1e'),
     borderRadius: 12,
     overflow: 'hidden',
   },
@@ -1463,11 +1632,11 @@ const styles = StyleSheet.create({
     padding: 14,
   },
   rowPressed: {
-    backgroundColor: '#f0f0f4',
+    backgroundColor: dyn('#f0f0f4', '#2c2c2e'),
   },
   rowText: {
     fontSize: 15,
-    color: '#111',
+    color: dyn('#111', '#f2f2f7'),
     lineHeight: 20,
   },
   rowFooter: {
@@ -1479,7 +1648,7 @@ const styles = StyleSheet.create({
   },
   rowMeta: {
     fontSize: 12,
-    color: '#888',
+    color: dyn('#888', '#9a9aa0'),
     flexShrink: 1,
     marginTop: 6,
   },
@@ -1487,24 +1656,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 6,
-    backgroundColor: '#e8f0fe',
+    backgroundColor: dyn('#e8f0fe', '#16233d'),
   },
   actionBtnPressed: {
-    backgroundColor: '#cfdcf7',
+    backgroundColor: dyn('#cfdcf7', '#274063'),
   },
   actionBtnText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#1a56d8',
+    color: dyn('#1a56d8', '#5a9dff'),
   },
   snippetLabel: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#111',
+    color: dyn('#111', '#f2f2f7'),
   },
   snippetPreview: {
     fontSize: 13,
-    color: '#555',
+    color: dyn('#555', '#c7c7cc'),
     lineHeight: 18,
     marginTop: 4,
   },
@@ -1513,47 +1682,47 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderLeftWidth: StyleSheet.hairlineWidth,
-    borderLeftColor: '#e0e0e5',
+    borderLeftColor: dyn('#e0e0e5', '#38383a'),
   },
   snippetEditBtnPressed: {
-    backgroundColor: '#f5f5f7',
+    backgroundColor: dyn('#f5f5f7', '#101014'),
   },
   snippetEditBtnText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#3478f6',
+    color: dyn('#3478f6', '#4a90ff'),
   },
   pinBtn: {
     width: 36,
     alignItems: 'center',
     justifyContent: 'center',
     borderLeftWidth: StyleSheet.hairlineWidth,
-    borderLeftColor: '#e0e0e5',
+    borderLeftColor: dyn('#e0e0e5', '#38383a'),
   },
   pinBtnPressed: {
-    backgroundColor: '#f5f5f7',
+    backgroundColor: dyn('#f5f5f7', '#101014'),
   },
   pinBtnText: {
     fontSize: 18,
-    color: '#bbb',
+    color: dyn('#bbb', '#6a6a6e'),
     lineHeight: 20,
   },
   pinBtnTextActive: {
-    color: '#f5a623',
+    color: dyn('#f5a623', '#ffb340'),
   },
   deleteBtn: {
     width: 44,
     alignItems: 'center',
     justifyContent: 'center',
     borderLeftWidth: StyleSheet.hairlineWidth,
-    borderLeftColor: '#e0e0e5',
+    borderLeftColor: dyn('#e0e0e5', '#38383a'),
   },
   deleteBtnPressed: {
-    backgroundColor: '#f5f5f7',
+    backgroundColor: dyn('#f5f5f7', '#101014'),
   },
   deleteBtnText: {
     fontSize: 22,
-    color: '#999',
+    color: dyn('#999', '#8e8e93'),
     lineHeight: 24,
   },
   emptyContainer: {
@@ -1567,29 +1736,54 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#444',
+    color: dyn('#444', '#d1d1d6'),
     marginBottom: 8,
   },
   emptyBody: {
     fontSize: 14,
-    color: '#888',
+    color: dyn('#888', '#9a9aa0'),
     textAlign: 'center',
     lineHeight: 20,
   },
   settingsContent: {
     padding: 16,
   },
+  themeRow: {
+    flexDirection: 'row',
+    padding: 8,
+    gap: 8,
+  },
+  themeOption: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: dyn('#f0f0f4', '#2c2c2e'),
+    gap: 4,
+  },
+  themeOptionActive: {
+    backgroundColor: dyn('#3478f6', '#4a90ff'),
+  },
+  themeOptionText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: dyn('#8a8a92', '#8e8e93'),
+  },
+  themeOptionTextActive: {
+    color: '#fff',
+  },
   settingsSectionTitle: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#8a8a92',
+    color: dyn('#8a8a92', '#8e8e93'),
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: 8,
     marginTop: 4,
   },
   settingsCard: {
-    backgroundColor: '#fff',
+    backgroundColor: dyn('#fff', '#1c1c1e'),
     borderRadius: 12,
     overflow: 'hidden',
     marginBottom: 20,
@@ -1602,30 +1796,30 @@ const styles = StyleSheet.create({
   keyboardInfoTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#111',
+    color: dyn('#111', '#f2f2f7'),
   },
   keyboardInfoBody: {
     fontSize: 13,
     lineHeight: 18,
-    color: '#666',
+    color: dyn('#666', '#aeaeb2'),
     marginTop: 4,
   },
   keyboardSteps: {
     fontSize: 13,
     lineHeight: 20,
-    color: '#444',
+    color: dyn('#444', '#d1d1d6'),
     marginTop: 10,
   },
   keyboardBtn: {
     margin: 14,
     marginTop: 10,
-    backgroundColor: '#3478f6',
+    backgroundColor: dyn('#3478f6', '#4a90ff'),
     borderRadius: 10,
     paddingVertical: 11,
     alignItems: 'center',
   },
   keyboardBtnPressed: {
-    backgroundColor: '#2a64d8',
+    backgroundColor: dyn('#2a64d8', '#4a90ff'),
   },
   keyboardBtnText: {
     color: '#fff',
@@ -1639,11 +1833,11 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   setupRowPressed: {
-    backgroundColor: '#f0f0f4',
+    backgroundColor: dyn('#f0f0f4', '#2c2c2e'),
   },
   setupDivider: {
     height: StyleSheet.hairlineWidth,
-    backgroundColor: '#e0e0e5',
+    backgroundColor: dyn('#e0e0e5', '#38383a'),
     marginLeft: 62,
   },
   setupIcon: {
@@ -1660,11 +1854,11 @@ const styles = StyleSheet.create({
   setupRowTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#111',
+    color: dyn('#111', '#f2f2f7'),
   },
   setupRowSub: {
     fontSize: 12,
-    color: '#888',
+    color: dyn('#888', '#9a9aa0'),
     marginTop: 1,
   },
   settingsRowTextWrap: {
@@ -1673,13 +1867,13 @@ const styles = StyleSheet.create({
   },
   settingsRowHint: {
     fontSize: 12,
-    color: '#888',
+    color: dyn('#888', '#9a9aa0'),
     marginTop: 2,
     lineHeight: 16,
   },
   detailScreen: {
     flex: 1,
-    backgroundColor: '#f5f5f7',
+    backgroundColor: dyn('#f5f5f7', '#101014'),
   },
   detailTopBar: {
     flexDirection: 'row',
@@ -1691,7 +1885,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#e6e6ea',
+    backgroundColor: dyn('#e6e6ea', '#2c2c2e'),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1706,19 +1900,19 @@ const styles = StyleSheet.create({
   detailTitle: {
     fontSize: 26,
     fontWeight: '800',
-    color: '#111',
+    color: dyn('#111', '#f2f2f7'),
     textAlign: 'center',
     marginTop: 24,
   },
   detailDesc: {
     fontSize: 15,
     lineHeight: 21,
-    color: '#666',
+    color: dyn('#666', '#aeaeb2'),
     textAlign: 'center',
     marginTop: 10,
   },
   detailStepsCard: {
-    backgroundColor: '#fff',
+    backgroundColor: dyn('#fff', '#1c1c1e'),
     borderRadius: 14,
     alignSelf: 'stretch',
     padding: 6,
@@ -1746,24 +1940,24 @@ const styles = StyleSheet.create({
   detailStepText: {
     flex: 1,
     fontSize: 15,
-    color: '#222',
+    color: dyn('#222', '#e5e5ea'),
     lineHeight: 20,
   },
   detailFooter: {
     paddingHorizontal: 24,
     paddingTop: 8,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#e0e0e5',
-    backgroundColor: '#f5f5f7',
+    borderTopColor: dyn('#e0e0e5', '#38383a'),
+    backgroundColor: dyn('#f5f5f7', '#101014'),
   },
   detailPrimaryBtn: {
-    backgroundColor: '#3478f6',
+    backgroundColor: dyn('#3478f6', '#4a90ff'),
     borderRadius: 14,
     paddingVertical: 15,
     alignItems: 'center',
   },
   detailPrimaryBtnPressed: {
-    backgroundColor: '#2a64d8',
+    backgroundColor: dyn('#2a64d8', '#4a90ff'),
   },
   detailPrimaryBtnText: {
     color: '#fff',
@@ -1772,7 +1966,7 @@ const styles = StyleSheet.create({
   },
   mockKeyboard: {
     alignSelf: 'stretch',
-    backgroundColor: '#d9dde3',
+    backgroundColor: dyn('#d9dde3', '#3a3a3c'),
     borderRadius: 14,
     padding: 12,
     marginTop: 8,
@@ -1789,7 +1983,7 @@ const styles = StyleSheet.create({
   mockKbPillGray: {
     height: 30,
     borderRadius: 15,
-    backgroundColor: '#b9bec6',
+    backgroundColor: dyn('#b9bec6', '#6a6a6e'),
   },
   mockKbKeyRow: {
     flexDirection: 'row',
@@ -1800,7 +1994,7 @@ const styles = StyleSheet.create({
     minWidth: 26,
     height: 34,
     borderRadius: 6,
-    backgroundColor: '#fbfbfd',
+    backgroundColor: dyn('#fbfbfd', '#1c1c1e'),
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 6,
@@ -1810,12 +2004,12 @@ const styles = StyleSheet.create({
   },
   mockKbKeyText: {
     fontSize: 13,
-    color: '#333',
+    color: dyn('#333', '#e5e5ea'),
     fontWeight: '500',
   },
   mockSheet: {
     alignSelf: 'stretch',
-    backgroundColor: '#fff',
+    backgroundColor: dyn('#fff', '#1c1c1e'),
     borderRadius: 14,
     padding: 8,
     marginTop: 8,
@@ -1831,7 +2025,7 @@ const styles = StyleSheet.create({
   mockSheetLabel: {
     flex: 1,
     fontSize: 15,
-    color: '#333',
+    color: dyn('#333', '#e5e5ea'),
   },
   mockHome: {
     flexDirection: 'row',
@@ -1841,10 +2035,10 @@ const styles = StyleSheet.create({
   mockWidget: {
     width: 120,
     height: 120,
-    backgroundColor: '#fff',
+    backgroundColor: dyn('#fff', '#1c1c1e'),
     borderRadius: 20,
     padding: 12,
-    shadowColor: '#000',
+    shadowColor: dyn('#000', '#ffffff'),
     shadowOpacity: 0.08,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 3 },
@@ -1852,14 +2046,14 @@ const styles = StyleSheet.create({
   mockWidgetTitle: {
     fontSize: 10,
     fontWeight: '800',
-    color: '#8a8a92',
+    color: dyn('#8a8a92', '#8e8e93'),
     letterSpacing: 0.5,
     marginBottom: 8,
   },
   mockWidgetLine: {
     height: 9,
     borderRadius: 4,
-    backgroundColor: '#dfe3ea',
+    backgroundColor: dyn('#dfe3ea', '#3a3a3c'),
     marginBottom: 7,
   },
   settingsRow: {
@@ -1871,43 +2065,43 @@ const styles = StyleSheet.create({
   },
   settingsRowLabel: {
     fontSize: 15,
-    color: '#111',
+    color: dyn('#111', '#f2f2f7'),
   },
   settingsRowValue: {
     fontSize: 15,
-    color: '#666',
+    color: dyn('#666', '#aeaeb2'),
   },
   settingsDivider: {
     height: StyleSheet.hairlineWidth,
-    backgroundColor: '#e0e0e5',
+    backgroundColor: dyn('#e0e0e5', '#38383a'),
     marginLeft: 14,
   },
   settingsDestructiveBtn: {
-    backgroundColor: '#fee',
+    backgroundColor: dyn('#fee', '#3a1a1c'),
     borderRadius: 10,
     paddingVertical: 12,
     alignItems: 'center',
     marginBottom: 12,
   },
   settingsDestructiveBtnPressed: {
-    backgroundColor: '#fcc',
+    backgroundColor: dyn('#fcc', '#5a2427'),
   },
   settingsDestructiveBtnDisabled: {
-    backgroundColor: '#eee',
+    backgroundColor: dyn('#eee', '#2c2c2e'),
   },
   settingsDestructiveBtnText: {
-    color: '#b00020',
+    color: dyn('#b00020', '#ff6b6b'),
     fontWeight: '600',
     fontSize: 15,
   },
   settingsDestructiveBtnTextDisabled: {
-    color: '#bbb',
+    color: dyn('#bbb', '#6a6a6e'),
   },
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
+    backgroundColor: dyn('#fff', '#1c1c1e'),
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#d0d0d5',
+    borderTopColor: dyn('#d0d0d5', '#48484a'),
     paddingTop: 8,
     paddingBottom: 8,
   },
@@ -1923,10 +2117,10 @@ const styles = StyleSheet.create({
   tabBtnText: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#9a9aa2',
+    color: dyn('#9a9aa2', '#8e8e93'),
     marginTop: 2,
   },
   tabBtnTextActive: {
-    color: '#3478f6',
+    color: dyn('#3478f6', '#4a90ff'),
   },
 });

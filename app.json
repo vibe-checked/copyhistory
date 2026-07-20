@@ -2,18 +2,25 @@
   "expo": {
     "name": "Copy History",
     "slug": "copyhistory",
-    "version": "2.22",
+    "version": "2.23",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.markutilitylabs.copyhistory",
       "buildNumber": "1",
       "infoPlist": {
         "CFBundleDisplayName": "Copy History",
-        "ITSAppUsesNonExemptEncryption": false
-      }
+        "ITSAppUsesNonExemptEncryption": false,
+        "UIUserInterfaceStyle": "Automatic",
+        "CFBundleLocalizations": [
+          "en",
+          "ar"
+        ],
+        "CFBundleDevelopmentRegion": "en"
+      },
+      "userInterfaceStyle": "automatic"
     },
     "android": {
       "package": "com.markutilitylabs.copyhistory",
@@ -41,7 +48,9 @@
           "imageWidth": 240
         }
       ],
-      "expo-font"
-    ]
+      "expo-font",
+      "expo-localization"
+    ],
+    "locales": {}
   }
 }

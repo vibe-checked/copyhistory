@@ -36,6 +36,8 @@ class KeyboardViewController: UIInputViewController {
   private let scrollView = UIScrollView()
   private let pillStack = UIStackView()
   private let messageLabel = UILabel()
+  // Punctuation keys are hidden/shown by width so the row fits narrow phones.
+  private var punctuationKeys: [UIButton] = []
 
   override func viewDidLoad() {
     super.viewDidLoad()
@@ -129,6 +131,11 @@ class KeyboardViewController: UIInputViewController {
     b.layer.cornerRadius = 7
     b.translatesAutoresizingMaskIntoConstraints = false
     b.heightAnchor.constraint(equalToConstant: 42).isActive = true
+    // Shrink the label rather than truncating it — on a narrow phone "return"
+    // was collapsing to "r" instead of scaling down.
+    b.titleLabel?.adjustsFontSizeToFitWidth = true
+    b.titleLabel?.minimumScaleFactor = 0.75
+    b.titleLabel?.lineBreakMode = .byClipping
     return b
   }
 
@@ -212,39 +219,79 @@ class KeyboardViewController: UIInputViewController {
     if needsInputModeSwitchKey {
       let globe = makeKey(title: "\\u{1F310}")
       globe.addTarget(self, action: #selector(handleInputModeList(from:with:)), for: .allTouchEvents)
-      globe.widthAnchor.constraint(equalToConstant: 38).isActive = true
-      globe.setContentHuggingPriority(.required, for: .horizontal)
+      pin(globe, width: 36)
       row.addArrangedSubview(globe)
     }
 
+    // Punctuation is the only expendable part of this row. On a narrow phone
+    // (iPhone SE portrait ~320pt) the full set cannot fit alongside
+    // globe/space/backspace/return, so keep references and hide the extras in
+    // adaptBottomRow(for:) rather than letting Auto Layout break a constraint
+    // and truncate "return" down to "r".
+    punctuationKeys.removeAll()
     for ch in [",", ".", "?", "!", "'"] {
       let key = makeKey(title: ch, fontSize: 20)
-      key.widthAnchor.constraint(equalToConstant: 32).isActive = true
-      key.setContentHuggingPriority(.required, for: .horizontal)
+      pin(key, width: 30)
       key.addAction(UIAction { [weak self] _ in self?.textDocumentProxy.insertText(ch) }, for: .touchUpInside)
+      punctuationKeys.append(key)
       row.addArrangedSubview(key)
     }
 
     // Space bar stretches to fill the remaining width.
     let space = makeKey(title: "space", fontSize: 14)
     space.setContentHuggingPriority(.defaultLow, for: .horizontal)
-    space.widthAnchor.constraint(greaterThanOrEqualToConstant: 60).isActive = true
+    space.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+    space.widthAnchor.constraint(greaterThanOrEqualToConstant: 44).isActive = true
     space.addAction(UIAction { [weak self] _ in self?.textDocumentProxy.insertText(" ") }, for: .touchUpInside)
     row.addArrangedSubview(space)
 
     let backspace = makeKey(title: "\\u{232B}", fontSize: 18)
-    backspace.widthAnchor.constraint(equalToConstant: 44).isActive = true
-    backspace.setContentHuggingPriority(.required, for: .horizontal)
+    pin(backspace, width: 42)
     backspace.addTarget(self, action: #selector(backspaceTapped), for: .touchUpInside)
     row.addArrangedSubview(backspace)
 
+    // Return must never be sacrificed — required minimum width, so it keeps its
+    // full label on every screen size.
     let returnKey = makeKey(title: "return", fontSize: 15, accent: true)
-    returnKey.widthAnchor.constraint(equalToConstant: 64).isActive = true
+    returnKey.widthAnchor.constraint(greaterThanOrEqualToConstant: 58).isActive = true
+    let preferred = returnKey.widthAnchor.constraint(equalToConstant: 64)
+    preferred.priority = .defaultHigh
+    preferred.isActive = true
     returnKey.setContentHuggingPriority(.required, for: .horizontal)
+    returnKey.setContentCompressionResistancePriority(.required, for: .horizontal)
     returnKey.addAction(UIAction { [weak self] _ in self?.textDocumentProxy.insertText("\\n") }, for: .touchUpInside)
     row.addArrangedSubview(returnKey)
 
     return row
+  }
+
+  // Fixed-ish width that is allowed to give way under pressure instead of
+  // breaking the row's layout.
+  private func pin(_ key: UIButton, width: CGFloat) {
+    let c = key.widthAnchor.constraint(equalToConstant: width)
+    c.priority = .defaultHigh
+    c.isActive = true
+    key.widthAnchor.constraint(greaterThanOrEqualToConstant: width - 6).isActive = true
+    key.setContentHuggingPriority(.required, for: .horizontal)
+  }
+
+  // Drop punctuation keys that cannot fit at the current width. Called on every
+  // layout pass so rotating between portrait and landscape restores them.
+  private func adaptBottomRow(for width: CGFloat) {
+    guard width > 0, !punctuationKeys.isEmpty else { return }
+    // Roughly how much room the non-negotiable keys need.
+    let reserved: CGFloat = (needsInputModeSwitchKey ? 42 : 0) + 44 + 42 + 58 + 40
+    let spare = width - 16 - reserved
+    let allowed = max(0, min(punctuationKeys.count, Int(spare / 36)))
+    for (i, key) in punctuationKeys.enumerated() {
+      let hidden = i >= allowed
+      if key.isHidden != hidden { key.isHidden = hidden }
+    }
+  }
+
+  override func viewWillLayoutSubviews() {
+    super.viewWillLayoutSubviews()
+    adaptBottomRow(for: view.bounds.width)
   }
 
   private func reload() {
