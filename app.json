@@ -2,14 +2,14 @@
   "expo": {
     "name": "Copy History",
     "slug": "copyhistory",
-    "version": "2.23",
+    "version": "2.24",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.markutilitylabs.copyhistory",
-      "buildNumber": "2",
+      "buildNumber": "1",
       "infoPlist": {
         "CFBundleDisplayName": "Copy History",
         "ITSAppUsesNonExemptEncryption": false,

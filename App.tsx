@@ -64,7 +64,7 @@ const KBD_TIP_KEY = 'copyhistory:kbdTipDismissed:v1';
 const THEME_KEY = 'copyhistory:theme:v1';
 const LANG_KEY = 'copyhistory:lang:v1';
 const MAX_ENTRIES = 500;
-const APP_VERSION = '2.23';
+const APP_VERSION = '2.24';
 const APP_BUILD = '1';
 
 type ThemePref = 'system' | 'light' | 'dark';
